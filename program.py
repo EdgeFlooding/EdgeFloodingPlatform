@@ -33,7 +33,6 @@ print("The following GPU devices are available: %s" % tf.test.gpu_device_name())
 
 
 def save_image(image):
-  fig = plt.figure(figsize=(20, 15))
   plt.grid(False)
   plt.imshow(image)
   plt.savefig("result.jpg") # TO DO: rendere parametrico
@@ -205,7 +204,7 @@ if __name__ == '__main__':
   #class_score = []
   #run_my_detector(detector, resized_image_path)
 
-  images_dir_path = "images/"
+  images_dir_path = "immagini_2/"
 
   # read all images
   for file in pathlib.Path(images_dir_path).iterdir():
