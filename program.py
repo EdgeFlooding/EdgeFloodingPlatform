@@ -2,7 +2,6 @@
 
 # For running inference on the TF-Hub module.
 import tensorflow as tf
-
 import tensorflow_hub as hub
 
 # For downloading the image.
@@ -22,6 +21,9 @@ from PIL import ImageOps
 # For measuring the inference time.
 import time
 
+# For managing the files.
+import pathlib
+import os
 
 # Print Tensorflow version
 print(tf.__version__)
@@ -29,26 +31,22 @@ print(tf.__version__)
 # Check available GPU devices.
 print("The following GPU devices are available: %s" % tf.test.gpu_device_name())
 
-def display_image(image):
+
+def save_image(image):
   fig = plt.figure(figsize=(20, 15))
   plt.grid(False)
   plt.imshow(image)
-  plt.savefig("result.jpg")
+  plt.savefig("result.jpg") # TO DO: rendere parametrico
 
 
-def download_and_resize_image(url, new_width=256, new_height=256,
-                              display=False):
+def resize_image(image_path, new_width=256, new_height=256):
+      # we have to delete it when we are done to avoid cluttering the /tmp directory
   _, filename = tempfile.mkstemp(suffix=".jpg")
-  response = urlopen(url)
-  image_data = response.read()
-  image_data = BytesIO(image_data)
-  pil_image = Image.open(image_data)
+  pil_image = Image.open(image_path)
   pil_image = ImageOps.fit(pil_image, (new_width, new_height), Image.ANTIALIAS)
   pil_image_rgb = pil_image.convert("RGB")
   pil_image_rgb.save(filename, format="JPEG", quality=90)
-  print("Image downloaded to %s." % filename)
-  if display:
-    display_image(pil_image)
+  print("Image resized to %s." % filename)
   return filename
 
 
@@ -125,9 +123,6 @@ def draw_boxes(image, boxes, class_names, scores, max_boxes=10, min_score=0.1):
       np.copyto(image, np.array(image_pil))
   return image
 
-module_handle = "https://tfhub.dev/google/openimages_v4/ssd/mobilenet_v2/1" #@param ["https://tfhub.dev/google/openimages_v4/ssd/mobilenet_v2/1", "https://tfhub.dev/google/faster_rcnn/openimages_v4/inception_resnet_v2/1"]
-
-detector = hub.load(module_handle).signatures['default']
 
 def load_img(path):
   img = tf.io.read_file(path)
@@ -138,15 +133,12 @@ def load_img(path):
 def run_detector(detector, path):
   img = load_img(path)
   converted_img  = tf.image.convert_image_dtype(img, tf.float32)[tf.newaxis, ...]
-  print("Chiamata a vuoto")
-  result = detector(converted_img)
-  print("Fine chiamata a vuoto")
   start_time = time.time()
   result = detector(converted_img)
-  end_time = time.time() # AGGIUNTO PER TEST
+  end_time = time.time()
   #print(result)
-  class_label.append(result["detection_class_entities"])
-  class_score.append(result["detection_scores"])
+  #class_label.append(result["detection_class_entities"])
+  #class_score.append(result["detection_scores"])
   #end_time = time.time()
 
   result = {key:value.numpy() for key,value in result.items()}
@@ -168,9 +160,7 @@ def run_detector(detector, path):
       )
 
   #print(result["detection_class_entities"])
-
-
-  display_image(image_with_boxes)
+  save_image(image_with_boxes)
 
 
 def run_my_detector(detector, path):
@@ -203,16 +193,27 @@ def run_my_detector(detector, path):
   
   print("Array Loaded with Object and Score")
   print(url)
-  #display_image(image_with_boxes)
+  #save_image(image_with_boxes)
 
 
+module_handle = "https://tfhub.dev/google/faster_rcnn/openimages_v4/inception_resnet_v2/1" #@param ["https://tfhub.dev/google/openimages_v4/ssd/mobilenet_v2/1", "https://tfhub.dev/google/faster_rcnn/openimages_v4/inception_resnet_v2/1"]
+detector = hub.load(module_handle).signatures['default']
 
-class_label = []
-class_score = []
-img_src = []
-#run_my_detector(detector, downloaded_image_path)
+if __name__ == '__main__':
 
-image_url = "http://atlantis.iet.unipi.it/image_flood.jpg"  #@param
-downloaded_image_path = download_and_resize_image(image_url, 1280, 856, True)
+  #class_label = []
+  #class_score = []
+  #run_my_detector(detector, resized_image_path)
 
-run_detector(detector, downloaded_image_path)
+  images_dir_path = "images/"
+
+  # read all images
+  for file in pathlib.Path(images_dir_path).iterdir():
+    # get the current image path
+    current_image_path = r"{}".format(file.resolve())
+    print(current_image_path)
+    resized_image_path = resize_image(current_image_path, 1280, 856)
+    run_detector(detector, resized_image_path)
+    # delete resized image
+    os.remove(resized_image_path)
+
