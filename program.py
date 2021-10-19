@@ -32,10 +32,10 @@ print(tf.__version__)
 print("The following GPU devices are available: %s" % tf.test.gpu_device_name())
 
 
-def save_image(image):
+def save_image(image, image_name):
   plt.grid(False)
   plt.imshow(image)
-  plt.savefig("result.jpg") # TO DO: rendere parametrico
+  plt.savefig(image_name)
 
 
 def resize_image(image_path, new_width=256, new_height=256):
@@ -132,67 +132,22 @@ def load_img(path):
 def run_detector(detector, path):
   img = load_img(path)
   converted_img  = tf.image.convert_image_dtype(img, tf.float32)[tf.newaxis, ...]
+
   start_time = time.time()
   result = detector(converted_img)
   end_time = time.time()
-  #print(result)
-  #class_label.append(result["detection_class_entities"])
-  #class_score.append(result["detection_scores"])
-  #end_time = time.time()
 
   result = {key:value.numpy() for key,value in result.items()}
-  #print(result["detection_class_entities"])
 
-  #class_label=result["detection_class_entities"]
-  #class_label.append(result["detection_class_entities"])
-  #class_score.append(result["detection_scores"])
   print("Found %d objects." % len(result["detection_scores"]))
   print("Inference time: ", end_time-start_time)
 
   image_with_boxes = draw_boxes(
       img.numpy(), result["detection_boxes"],
       result["detection_class_entities"], result["detection_scores"]
-      #,
-      #class_label.append((result["detection_class_entities"])),
-      #class_score.append((result["detection_scores"]))
-            #class_score.append(result["detection_scores"])
       )
 
-  #print(result["detection_class_entities"])
-  save_image(image_with_boxes)
-
-
-def run_my_detector(detector, path):
-  img = load_img(path)
-  converted_img  = tf.image.convert_image_dtype(img, tf.float32)[tf.newaxis, ...]
-  start_time = time.time()
-  result = detector(converted_img)
-  #print(result)
-  class_label.append(result["detection_class_entities"])
-  class_score.append(result["detection_scores"])
-  end_time = time.time()
-
-  result = {key:value.numpy() for key,value in result.items()}
-  #print(result.items())
-  
-  #class_label=result["detection_class_entities"]
-  #class_label.append(result["detection_class_entities"])  
-  #class_score.append(result["detection_scores"])
-  print("Found %d objects." % len(result["detection_scores"]))
-  print("Inference time: ", end_time-start_time)
-
-  image_with_boxes = draw_boxes(
-      img.numpy(), result["detection_boxes"],
-      result["detection_class_entities"], result["detection_scores"],
-      class_label.append((result["detection_class_entities"])),
-      class_score.append(result["detection_scores"])
-      )
-   
-  print(result["detection_class_entities"])
-  
-  print("Array Loaded with Object and Score")
-  print(url)
-  #save_image(image_with_boxes)
+  save_image(image_with_boxes, "result.jpg")
 
 
 module_handle = "https://tfhub.dev/google/faster_rcnn/openimages_v4/inception_resnet_v2/1" #@param ["https://tfhub.dev/google/openimages_v4/ssd/mobilenet_v2/1", "https://tfhub.dev/google/faster_rcnn/openimages_v4/inception_resnet_v2/1"]
@@ -200,11 +155,7 @@ detector = hub.load(module_handle).signatures['default']
 
 if __name__ == '__main__':
 
-  #class_label = []
-  #class_score = []
-  #run_my_detector(detector, resized_image_path)
-
-  images_dir_path = "immagini_2/"
+  images_dir_path = "immagini_1/"
 
   # read all images
   for file in pathlib.Path(images_dir_path).iterdir():
