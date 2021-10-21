@@ -10,8 +10,6 @@ import tensorflow_hub as hub
 
 # For downloading the image.
 import matplotlib.pyplot as plt
-import tempfile
-from six import BytesIO
 
 # For drawing onto the image.
 import numpy as np
@@ -21,24 +19,17 @@ from PIL import ImageDraw
 from PIL import ImageFont
 from PIL import ImageOps
 
-# For managing the files.
-import pathlib
-import os
-
 
 def resize_image(frame, new_width=256, new_height=256):
   
   pil_image = Image.fromarray(np.uint8(frame))
   pil_image = ImageOps.fit(pil_image, (new_width, new_height), Image.ANTIALIAS)
   pil_image_rgb = pil_image.convert("RGB")
-  
-  _, filename = tempfile.mkstemp(suffix=".jpg")
-  pil_image_rgb.save(filename, format="JPEG", quality=90)
 
-  img = load_img(filename)
-  # delete resized image
-  os.remove(filename)
-  return img
+  img = tf.convert_to_tensor(pil_image_rgb, dtype=tf.uint8)
+  converted_img  = tf.image.convert_image_dtype(img, tf.float32)[tf.newaxis, ...]
+
+  return converted_img
 
 
 def draw_bounding_box_on_image(image,
@@ -121,18 +112,10 @@ def save_image(image, image_name):
   plt.savefig(image_name)
 
 
-def load_img(path):
-  img = tf.io.read_file(path)
-  img = tf.image.decode_jpeg(img, channels=3)
-  return img
-
-
 def run_detector(detector, img):
-  #converted_img = tf.convert_to_tensor(resized_frame, tf.float32)[tf.newaxis, ...]
-  converted_img  = tf.image.convert_image_dtype(img, tf.float32)[tf.newaxis, ...]
-
+  
   start_time = time.time()
-  result = detector(converted_img)
+  result = detector(img)
   end_time = time.time()
 
   result = {key:value.numpy() for key,value in result.items()}
@@ -166,7 +149,7 @@ if __name__ == '__main__':
     # define a video capture object
     cap = cv2.VideoCapture(video_path)
 
-    frames_to_analyse = 20 
+    frames_to_analyse = 10
 
     while cap.isOpened():
         
