@@ -23,9 +23,9 @@ from frame_slot import FrameSlot
 
 import threading
 
-def resize_image(frame, new_width=256, new_height=256):
+def resize_image(raw_frame, new_width, new_height):
   
-  pil_image = Image.fromarray(np.uint8(frame))
+  pil_image = Image.fromarray(np.uint8(raw_frame))
   pil_image = ImageOps.fit(pil_image, (new_width, new_height), Image.ANTIALIAS)
   pil_image_rgb = pil_image.convert("RGB")
 
@@ -115,7 +115,14 @@ def save_image(image, image_name):
   plt.savefig(image_name)
 
 
-def run_detector(detector, img):
+def load_model_on_GPU(detector):
+  img = tf.zeros([856, 1280], tf.float32)
+  run_detector(detector, img, setup = True)
+
+
+
+# if Setup == True -> we are in the empty call, so no print required
+def run_detector(detector, img, setup = False):
   
   start_time = time.time()
   result = detector(img)
@@ -123,33 +130,40 @@ def run_detector(detector, img):
 
   result = {key:value.numpy() for key,value in result.items()}
 
-  print("Found %d objects." % len(result["detection_scores"]))
-  print("Inference time: ", end_time-start_time)
+  if setup is False:
+    print("Found %d objects." % len(result["detection_scores"]))
+    print("Inference time: ", end_time-start_time)
 
-  '''
-  image_with_boxes = draw_boxes(
-      resized_frame.numpy(), result["detection_boxes"],
-      result["detection_class_entities"], result["detection_scores"]
-      )
-  '''
-  #save_image(image_with_boxes, "result.jpg")
+    '''
+    image_with_boxes = draw_boxes(
+        resized_frame.numpy(), result["detection_boxes"],
+        result["detection_class_entities"], result["detection_scores"]
+        )
+    '''
+    #save_image(image_with_boxes, "result.jpg")
+    
 
 
-def consume(fs, run_event):
+def consume(detector, fs, run_event):
 
-  module_handle = "https://tfhub.dev/google/faster_rcnn/openimages_v4/inception_resnet_v2/1" #@param ["https://tfhub.dev/google/openimages_v4/ssd/mobilenet_v2/1", "https://tfhub.dev/google/faster_rcnn/openimages_v4/inception_resnet_v2/1"]
-  detector = hub.load(module_handle).signatures['default']
+  i = 0 # DEBUG
 
   while run_event.is_set():
     print("Consumo")
-    frame = fs.consume_frame()
+    frame_object = fs.consume_frame()
 
-    if frame == None:
+    if frame_object == None:
         print("Lo slot era vuoto")
         continue
     
-    img = resize_image(frame, 1280, 856)
+    img = resize_image(frame_object.raw_frame, 1280, 856)
     run_detector(detector, img)
+
+    print("Analizzato frame: ", str(i)) # DEBUG
+    i = i + 1 # DEBUG
+
+    # Attention: the frames analysed are not saved anywhere!
+    frame_object.completion_timestamp = time.time()
     
 
 def produce(fs, run_event): # TODO
@@ -157,6 +171,8 @@ def produce(fs, run_event): # TODO
 
   # define a video capture object
   cap = cv2.VideoCapture(video_path)
+
+  i = 0 # DEBUG
 
   while cap.isOpened() and run_event.is_set():
       
@@ -170,6 +186,9 @@ def produce(fs, run_event): # TODO
 
     fs.update_frame(frame)
 
+    print("Inserito frame: ", str(i)) # DEBUG
+    i = i + 1 # DEBUG
+
   # After the loop release the cap object
   cap.release()
     
@@ -182,16 +201,25 @@ def main():
   # Check available GPU devices.
   print("The following GPU devices are available: %s" % tf.test.gpu_device_name())
 
+  # Get the detector
+  module_handle = "https://tfhub.dev/google/faster_rcnn/openimages_v4/inception_resnet_v2/1" #@param ["https://tfhub.dev/google/openimages_v4/ssd/mobilenet_v2/1", "https://tfhub.dev/google/faster_rcnn/openimages_v4/inception_resnet_v2/1"]
+  detector = hub.load(module_handle).signatures['default']
+
+  # Prepare the frameslot(s)
   fs = FrameSlot(1)
   
+  # Event to terminate threads with ctrl + C
   run_event = threading.Event()
   run_event.set()
 
+  # Preparing threads
   t_p = threading.Thread(target = produce, args = (fs, run_event))
-  t_c = threading.Thread(target = consume, args = (fs, run_event))
+  t_c = threading.Thread(target = consume, args = (detector, fs, run_event))
 
-  # TODO caricare modello in gpu con una chiamata a vuoto
+  # TODO Load the detector on the GPU via a call on an empty tensor
+  load_model_on_GPU(detector)
 
+  '''
   t_p.start()
   time.sleep(.5)
   t_c.start()
@@ -205,6 +233,8 @@ def main():
       t_p.join()
       t_c.join()
       print("threads successfully closed")
+  
+  '''
 
   
 
