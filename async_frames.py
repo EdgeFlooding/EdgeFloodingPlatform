@@ -19,6 +19,9 @@ from PIL import ImageDraw
 from PIL import ImageFont
 from PIL import ImageOps
 
+from frame_slot import FrameSlot
+
+import threading
 
 def resize_image(frame, new_width=256, new_height=256):
   
@@ -132,46 +135,79 @@ def run_detector(detector, img):
   #save_image(image_with_boxes, "result.jpg")
 
 
+def consume(fs, run_event):
+
+  module_handle = "https://tfhub.dev/google/faster_rcnn/openimages_v4/inception_resnet_v2/1" #@param ["https://tfhub.dev/google/openimages_v4/ssd/mobilenet_v2/1", "https://tfhub.dev/google/faster_rcnn/openimages_v4/inception_resnet_v2/1"]
+  detector = hub.load(module_handle).signatures['default']
+
+  while run_event.is_set():
+    print("Consumo")
+    frame = fs.consume_frame()
+
+    if frame == None:
+        print("Lo slot era vuoto")
+        continue
+    
+    img = resize_image(frame, 1280, 856)
+    run_detector(detector, img)
+    
+
+def produce(fs, run_event): # TODO
+  video_path = 'Rec_20200125_170152_211_S.mp4'
+
+  # define a video capture object
+  cap = cv2.VideoCapture(video_path)
+
+  while cap.isOpened() and run_event.is_set():
+      
+    # Get a new frame
+    ret, frame = cap.read()
+
+    # No more frames
+    if not ret:
+      print("I frame del video sono finiti")
+      break
+
+    fs.update_frame(frame)
+
+  # After the loop release the cap object
+  cap.release()
+    
+
+
+def main():
+  # Print Tensorflow version
+  print(tf.__version__)
+
+  # Check available GPU devices.
+  print("The following GPU devices are available: %s" % tf.test.gpu_device_name())
+
+  fs = FrameSlot(1)
+  
+  run_event = threading.Event()
+  run_event.set()
+
+  t_p = threading.Thread(target = produce, args = (fs, run_event))
+  t_c = threading.Thread(target = consume, args = (fs, run_event))
+
+  # TODO caricare modello in gpu con una chiamata a vuoto
+
+  t_p.start()
+  time.sleep(.5)
+  t_c.start()
+
+  try:
+      while 1:
+          time.sleep(.1)
+  except KeyboardInterrupt:
+      print("attempting to close threads")
+      run_event.clear()
+      t_p.join()
+      t_c.join()
+      print("threads successfully closed")
+
+  
 
 if __name__ == '__main__':
-
-    # Print Tensorflow version
-    print(tf.__version__)
-
-    # Check available GPU devices.
-    print("The following GPU devices are available: %s" % tf.test.gpu_device_name())
-
-    module_handle = "https://tfhub.dev/google/faster_rcnn/openimages_v4/inception_resnet_v2/1" #@param ["https://tfhub.dev/google/openimages_v4/ssd/mobilenet_v2/1", "https://tfhub.dev/google/faster_rcnn/openimages_v4/inception_resnet_v2/1"]
-    detector = hub.load(module_handle).signatures['default']
-
-    video_path = 'Rec_20200125_170152_211_S.mp4'
-
-    # define a video capture object
-    cap = cv2.VideoCapture(video_path)
-
-    frames_to_analyse = 10
-
-    while cap.isOpened():
-        
-        # Get a new frame
-        ret, frame = cap.read()
-
-        # No more frames
-        if not ret:
-            break
-        
-        # run the detector on the frame TODO!!!
-        img = resize_image(frame, 1280, 856)
-        run_detector(detector, img)
-
-        # Check if test is finished
-        frames_to_analyse = frames_to_analyse - 1
-
-        if frames_to_analyse == 0:
-            print("End of test")
-            break
-
-
-    # After the loop release the cap object
-    cap.release()
+  main()
 
