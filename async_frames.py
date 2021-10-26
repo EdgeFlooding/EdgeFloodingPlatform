@@ -116,8 +116,11 @@ def save_image(image, image_name):
 
 
 def load_model_on_GPU(detector):
-  img = tf.zeros([856, 1280], tf.float32)
+  
+  img = np.zeros([856, 1280], np.uint8)
+  img = resize_image(img, 1280, 856)
   run_detector(detector, img, setup = True)
+  print("The model is ready")
 
 
 
