@@ -123,7 +123,6 @@ def load_model_on_GPU(detector):
   print("The model is ready")
 
 
-
 # if Setup == True -> we are in the empty call, so no print required
 def run_detector(detector, img, setup = False):
   
@@ -146,23 +145,23 @@ def run_detector(detector, img, setup = False):
     #save_image(image_with_boxes, "result.jpg")
     
 
-
 def consume(detector, fs, run_event):
-
+  print("Consuming...") # DEBUG
   i = 0 # DEBUG
 
   while run_event.is_set():
-    print("Consumo")
+    
     frame_object = fs.consume_frame()
 
     if frame_object == None:
-        print("Lo slot era vuoto")
+        print("Frame slot was empty")
+        time.sleep(1)
         continue
     
     img = resize_image(frame_object.raw_frame, 1280, 856)
     run_detector(detector, img)
 
-    print("Analizzato frame: ", str(i)) # DEBUG
+    print("Analysed: ", str(i), "Frames, it was the one with id: ", frame_object.id) # DEBUG
     i = i + 1 # DEBUG
 
     # Attention: the frames analysed are not saved anywhere!
@@ -175,22 +174,25 @@ def produce(fs, run_event): # TODO
   # define a video capture object
   cap = cv2.VideoCapture(video_path)
 
+  print("Producing...") # DEBUG
   i = 0 # DEBUG
 
   while cap.isOpened() and run_event.is_set():
-      
+    
+
     # Get a new frame
     ret, frame = cap.read()
 
     # No more frames
     if not ret:
-      print("I frame del video sono finiti")
+      print("The frames of the video are finished -> Producer exiting")
       break
 
     fs.update_frame(frame)
 
-    print("Inserito frame: ", str(i)) # DEBUG
+    print("Inserted frame: ", str(i)) # DEBUG
     i = i + 1 # DEBUG
+    time.sleep(0.5) # DEBUG
 
   # After the loop release the cap object
   cap.release()
@@ -219,10 +221,10 @@ def main():
   t_p = threading.Thread(target = produce, args = (fs, run_event))
   t_c = threading.Thread(target = consume, args = (detector, fs, run_event))
 
-  # TODO Load the detector on the GPU via a call on an empty tensor
+  # Load the detector on the GPU via a call on an empty tensor
   load_model_on_GPU(detector)
 
-  '''
+  
   t_p.start()
   time.sleep(.5)
   t_c.start()
@@ -237,10 +239,7 @@ def main():
       t_c.join()
       print("threads successfully closed")
   
-  '''
-
   
-
 if __name__ == '__main__':
   main()
 

@@ -40,9 +40,13 @@ class FrameSlot():
     # called by the producer
     @synchronized(lock)
     def update_frame(self, raw_frame):
+
         self.empty = False
+
+        self.frame_object.id = self.frames_produced
         self.frame_object.raw_frame = raw_frame
         self.frame_object.creation_timestamp = time.time()
+        
         self.frames_produced = self.frames_produced + 1
         #print("Frame prodotti: ", self.frames_produced)
 
@@ -55,9 +59,15 @@ class FrameSlot():
             return None
         
         self.empty = True
+
         self.frame_object.service_timestamp = time.time()
+        
         self.frames_consumed = self.frames_consumed + 1
         #print("Frame consumati: ", self.frames_consumed)
 
-        return self.frame_object
+        # I need to return a new Frame obj to avoid working on the same reference
+        return_obj = Frame(self.id)
+        return_obj.copy_attributes(self.frame_object)
+
+        return return_obj
 
