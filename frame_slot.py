@@ -43,9 +43,12 @@ class FrameSlot():
 
         self.empty = False
 
+        # Taking care of all the object frame
         self.frame_object.id = self.frames_produced
         self.frame_object.raw_frame = raw_frame
         self.frame_object.creation_timestamp = time.time()
+        self.frame_object.service_timestamp = None
+        self.frame_object.completion_timestamp = None
         
         self.frames_produced = self.frames_produced + 1
         #print("Frame prodotti: ", self.frames_produced)
