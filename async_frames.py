@@ -145,36 +145,58 @@ def run_detector(detector, img, setup = False):
     #save_image(image_with_boxes, "result.jpg")
     
 
-def consume(detector, fs, run_event):
+# Returns the frame and the next index from which to start the next round_robin_consume
+def round_robin_consume(fs_list, start_index): 
+  fs_list_len = len(fs_list)
+
+  current_index = start_index
+  while True:
+    frame_object = fs_list[current_index].consume_frame()
+
+    if frame_object == None:
+        print("Frame slot", str(fs_list[current_index].id) , "was empty")
+        current_index = (current_index + 1) % fs_list_len
+
+        if current_index == start_index: # All slots are empty
+          return None, 0
+        
+        continue
+    
+    return frame_object, (current_index + 1) % fs_list_len 
+
+
+def consume(detector, fs_list, run_event):
   print("Consuming...") # DEBUG
-  i = 0 # DEBUG
+  i = 1 # DEBUG
+
+  fs_index = 0
 
   while run_event.is_set():
     
-    frame_object = fs.consume_frame()
+    frame_object, fs_index = round_robin_consume(fs_list, fs_index)
 
     if frame_object == None:
-        print("Frame slot was empty")
+        print("All frame slots were empty")
         time.sleep(1)
         continue
     
     img = resize_image(frame_object.raw_frame, 1280, 856)
     run_detector(detector, img)
 
-    print("Analysed: ", str(i), "Frames, it was the one with id: ", frame_object.id) # DEBUG
+    print("Analysed: ", str(i), "Frames, it was the one with id: ", str(frame_object.id), "coming from frame slot: ", str(frame_object.id_slot)) # DEBUG
     i = i + 1 # DEBUG
 
     # Attention: the frames analysed are not saved anywhere!
     frame_object.completion_timestamp = time.time()
     
 
-def produce(fs, run_event): # TODO
+def produce(fs, run_event):
   video_path = 'Rec_20200125_170152_211_S.mp4'
 
   # define a video capture object
   cap = cv2.VideoCapture(video_path)
 
-  print("Producing...") # DEBUG
+  print("Producing...", str(fs.id)) # DEBUG
   i = 0 # DEBUG
 
   while cap.isOpened() and run_event.is_set():
@@ -185,18 +207,18 @@ def produce(fs, run_event): # TODO
 
     # No more frames
     if not ret:
-      print("The frames of the video are finished -> Producer exiting")
+      print("The frames of the video are finished -> Producer",str(fs.id), "exiting")
       break
 
     fs.update_frame(frame)
 
-    print("Inserted frame: ", str(i)) # DEBUG
+    print("Inserted frame: ", str(i), "from producer", str(fs.id)) # DEBUG
     i = i + 1 # DEBUG
     time.sleep(0.5) # DEBUG
 
   # After the loop release the cap object
   cap.release()
-    
+
 
 
 def main():
@@ -210,22 +232,25 @@ def main():
   module_handle = "https://tfhub.dev/google/faster_rcnn/openimages_v4/inception_resnet_v2/1" #@param ["https://tfhub.dev/google/openimages_v4/ssd/mobilenet_v2/1", "https://tfhub.dev/google/faster_rcnn/openimages_v4/inception_resnet_v2/1"]
   detector = hub.load(module_handle).signatures['default']
 
-  # Prepare the frameslot(s)
-  fs = FrameSlot(1)
-  
+  # Prepare the frameslot list
+  fs_list = [FrameSlot(id) for id in range(1,3)]
+
+
   # Event to terminate threads with ctrl + C
   run_event = threading.Event()
   run_event.set()
 
   # Preparing threads
-  t_p = threading.Thread(target = produce, args = (fs, run_event))
-  t_c = threading.Thread(target = consume, args = (detector, fs, run_event))
+  t_p1 = threading.Thread(target = produce, args = (fs_list[0], run_event))
+  t_p2 = threading.Thread(target = produce, args = (fs_list[1], run_event))
+  t_c = threading.Thread(target = consume, args = (detector, fs_list, run_event))
 
   # Load the detector on the GPU via a call on an empty tensor
   load_model_on_GPU(detector)
 
   
-  t_p.start()
+  t_p1.start()
+  t_p2.start()
   time.sleep(.5)
   t_c.start()
 
@@ -235,7 +260,8 @@ def main():
   except KeyboardInterrupt:
       print("attempting to close threads")
       run_event.clear()
-      t_p.join()
+      t_p1.join()
+      t_p2.join()
       t_c.join()
       print("threads successfully closed")
   
