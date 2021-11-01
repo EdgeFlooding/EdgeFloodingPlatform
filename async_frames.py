@@ -23,6 +23,8 @@ from frame_slot import FrameSlot
 
 import threading
 
+import sys
+
 def resize_image(raw_frame, new_width, new_height):
   
   pil_image = Image.fromarray(np.uint8(raw_frame))
@@ -196,25 +198,32 @@ def produce(fs, run_event):
   # define a video capture object
   cap = cv2.VideoCapture(video_path)
 
+  fps = cap.get(cv2.CAP_PROP_FPS)
+  prev_update_timestamp = 0
+
+
   print("Producing...", str(fs.id)) # DEBUG
   i = 0 # DEBUG
 
   while cap.isOpened() and run_event.is_set():
     
+    time_elapsed = time.time() - prev_update_timestamp
 
-    # Get a new frame
-    ret, frame = cap.read()
+    if time_elapsed > 1./fps:
 
-    # No more frames
-    if not ret:
-      print("The frames of the video are finished -> Producer",str(fs.id), "exiting")
-      break
+      # Get a new frame
+      ret, frame = cap.read()
 
-    fs.update_frame(frame)
+      # No more frames
+      if not ret:
+        print("The frames of the video are finished -> Producer",str(fs.id), "exiting")
+        break
 
-    print("Inserted frame: ", str(i), "from producer", str(fs.id)) # DEBUG
-    i = i + 1 # DEBUG
-    time.sleep(0.5) # DEBUG
+      fs.update_frame(frame)
+      prev_update_timestamp = time.time()
+
+      print("Inserted frame: ", str(i), "from producer", str(fs.id)) # DEBUG
+      i = i + 1 # DEBUG
 
   # After the loop release the cap object
   cap.release()
@@ -233,7 +242,8 @@ def main():
   detector = hub.load(module_handle).signatures['default']
 
   # Warning: no checks performed
-  n_producers = int(input("Insert number of producers\n"))
+  n_producers = int(sys.argv[1])
+  #n_producers = int(input("Insert number of producers\n"))
 
   # Prepare the frameslot list
   fs_list = [FrameSlot(id) for id in range(1,n_producers + 1)]
@@ -262,7 +272,7 @@ def main():
       while 1:
           time.sleep(.1)
   except KeyboardInterrupt:
-      print("attempting to close threads")
+      print("\nattempting to close threads")
       run_event.clear()
 
       # Waiting for threads to close
