@@ -232,8 +232,11 @@ def main():
   module_handle = "https://tfhub.dev/google/faster_rcnn/openimages_v4/inception_resnet_v2/1" #@param ["https://tfhub.dev/google/openimages_v4/ssd/mobilenet_v2/1", "https://tfhub.dev/google/faster_rcnn/openimages_v4/inception_resnet_v2/1"]
   detector = hub.load(module_handle).signatures['default']
 
+  # Warning: no checks performed
+  n_producers = int(input("Insert number of producers\n"))
+
   # Prepare the frameslot list
-  fs_list = [FrameSlot(id) for id in range(1,3)]
+  fs_list = [FrameSlot(id) for id in range(1,n_producers + 1)]
 
 
   # Event to terminate threads with ctrl + C
@@ -241,16 +244,17 @@ def main():
   run_event.set()
 
   # Preparing threads
-  t_p1 = threading.Thread(target = produce, args = (fs_list[0], run_event))
-  t_p2 = threading.Thread(target = produce, args = (fs_list[1], run_event))
+  producer_threads = [threading.Thread(target = produce, args = (fs_list[i], run_event)) for i in range(n_producers)]
+  
   t_c = threading.Thread(target = consume, args = (detector, fs_list, run_event))
 
   # Load the detector on the GPU via a call on an empty tensor
   load_model_on_GPU(detector)
 
-  
-  t_p1.start()
-  t_p2.start()
+  # Starting producer threads
+  for th in producer_threads:
+    th.start()
+
   time.sleep(.5)
   t_c.start()
 
@@ -260,8 +264,11 @@ def main():
   except KeyboardInterrupt:
       print("attempting to close threads")
       run_event.clear()
-      t_p1.join()
-      t_p2.join()
+
+      # Waiting for threads to close
+      for th in producer_threads:
+        th.join()
+
       t_c.join()
       print("threads successfully closed")
   
