@@ -8,13 +8,14 @@ def rescale_frame(frame, width, height):
 	return cv2.resize(frame, dimensions, interpolation=cv2.INTER_AREA)
 
 
-video_path = 'Rec_20200207_142322_151_M.mp4'
+video_path = '../videos/Rec_20200207_142322_151_M.mp4'
 
 # define a video capture object
 cap = cv2.VideoCapture(video_path)
 
 fps = cap.get(cv2.CAP_PROP_FPS)
-amount_of_frames = cap.get(7)
+total_num_frames = cap.get(7)
+frame_count = 0
 
 prev = 0
 
@@ -25,6 +26,13 @@ while cap.isOpened():
 	if time_elapsed > 1./fps:
 		print(time_elapsed)
 
+		frame_count = frame_count + 1
+		if frame_count == total_num_frames:
+			print("Riparto da capo")
+			frame_count = 1
+			cap.release()
+			cap = cv2.VideoCapture(video_path)
+
 		# Get a new frame
 		ret, frame = cap.read()
 
@@ -33,7 +41,8 @@ while cap.isOpened():
 		# No more frames
 		if not ret:
 			break
-		
+
+
 		prev = time.time()
 		cv2.imshow('frame_resized', rescale_frame(frame, 1280, 856))
 

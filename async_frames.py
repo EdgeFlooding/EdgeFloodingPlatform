@@ -195,9 +195,14 @@ def consume(detector, fs_list, run_event):
 def produce(fs, run_event):
   video_path = 'Rec_20200125_170152_211_S.mp4'
 
-  # define a video capture object
+  # Define a video capture object
   cap = cv2.VideoCapture(video_path)
 
+  # For cyclical playback of videos
+  total_num_frames = cap.get(7)
+  frame_count = 0
+
+  # To playback at the right framerate
   fps = cap.get(cv2.CAP_PROP_FPS)
   prev_update_timestamp = 0
 
@@ -207,10 +212,19 @@ def produce(fs, run_event):
 
   while cap.isOpened() and run_event.is_set():
     
-    time_elapsed = time.time() - prev_update_timestamp
+    # How much time from the extraction of the last frame?
+    time_elapsed = time.time() - prev_update_timestamp 
 
     if time_elapsed > 1./fps:
 
+      frame_count = frame_count + 1
+
+      if frame_count == total_num_frames:
+        print("========= Producer", str(fs.id), "is restarting the video reproduction =======") # DEBUG
+        frame_count = 1
+        cap.release()
+        cap = cv2.VideoCapture(video_path)
+      
       # Get a new frame
       ret, frame = cap.read()
 
@@ -243,7 +257,6 @@ def main():
 
   # Warning: no checks performed
   n_producers = int(sys.argv[1])
-  #n_producers = int(input("Insert number of producers\n"))
 
   # Prepare the frameslot list
   fs_list = [FrameSlot(id) for id in range(1,n_producers + 1)]
