@@ -22,8 +22,9 @@ from PIL import ImageOps
 from frame_slot import FrameSlot
 
 import threading
-
 import sys
+import psutil
+import logging
 
 def resize_image(raw_frame, new_width, new_height):
   
@@ -243,6 +244,11 @@ def produce(fs, run_event):
   cap.release()
 
 
+def track_utilization(run_event, logger):
+  while run_event.is_set():
+    logger.info(f"CPU percentage: {psutil.cpu_percent(interval=2)}")
+    logger.info(f"Memory percentage: {psutil.virtual_memory().percent}")
+
 
 def main():
   # Print Tensorflow version
@@ -261,6 +267,13 @@ def main():
   # Prepare the frameslot list
   fs_list = [FrameSlot(id) for id in range(1,n_producers + 1)]
 
+  # logging configuration
+  LOG_FORMAT = "%(levelname)s %(asctime)s %(message)s"
+  logging.basicConfig(filename="test.log", # TODO: Prendere da riga di comando
+    level=logging.DEBUG,
+    format=LOG_FORMAT,
+    filemode="w")
+  logger = logging.getLogger()
 
   # Event to terminate threads with ctrl + C
   run_event = threading.Event()
@@ -268,8 +281,8 @@ def main():
 
   # Preparing threads
   producer_threads = [threading.Thread(target = produce, args = (fs_list[i], run_event)) for i in range(n_producers)]
-  
-  t_c = threading.Thread(target = consume, args = (detector, fs_list, run_event))
+  logger_thread = threading.Thread(target = track_utilization, args = (run_event, logger))
+  consumer_thread = threading.Thread(target = consume, args = (detector, fs_list, run_event))
 
   # Load the detector on the GPU via a call on an empty tensor
   load_model_on_GPU(detector)
@@ -279,7 +292,8 @@ def main():
     th.start()
 
   time.sleep(.5)
-  t_c.start()
+  consumer_thread.start()
+  logger_thread.start()
 
   try:
       while 1:
@@ -292,7 +306,8 @@ def main():
       for th in producer_threads:
         th.join()
 
-      t_c.join()
+      consumer_thread.join()
+      logger_thread.join()
       print("threads successfully closed")
   
   
