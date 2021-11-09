@@ -246,6 +246,7 @@ def produce(fs, run_event):
 
 def track_utilization(run_event, logger):
   while run_event.is_set():
+    print("Eseguo track utilization") # DEBUG
     logger.info(f"CPU percentage: {psutil.cpu_percent(interval=2)}")
     logger.info(f"Memory percentage: {psutil.virtual_memory().percent}")
 
@@ -267,12 +268,13 @@ def main():
   # Prepare the frameslot list
   fs_list = [FrameSlot(id) for id in range(1,n_producers + 1)]
 
-  # logging configuration
-  LOG_FORMAT = "%(levelname)s %(asctime)s %(message)s"
-  logging.basicConfig(filename="test.log", # TODO: Prendere da riga di comando
-    level=logging.DEBUG,
-    format=LOG_FORMAT,
-    filemode="w")
+  # Remove all handlers associated with the root logger object. 
+  for handler in logging.root.handlers[:]:
+    logging.root.removeHandler(handler)
+
+  # logger configuration
+  LOG_FORMAT = "%(levelname)s %(asctime)s %(message)s" 
+  logging.basicConfig(filename="test.log", level=logging.DEBUG, format=LOG_FORMAT, filemode="w")
   logger = logging.getLogger()
 
   # Event to terminate threads with ctrl + C
@@ -291,24 +293,25 @@ def main():
   for th in producer_threads:
     th.start()
 
+  logger_thread.start()
   time.sleep(.5)
   consumer_thread.start()
-  logger_thread.start()
+  
 
   try:
-      while 1:
-          time.sleep(.1)
+    while 1:
+      time.sleep(.1)
   except KeyboardInterrupt:
-      print("\nattempting to close threads")
-      run_event.clear()
+    print("\nattempting to close threads")
+    run_event.clear()
 
-      # Waiting for threads to close
-      for th in producer_threads:
-        th.join()
+    # Waiting for threads to close
+    for th in producer_threads:
+      th.join()
 
-      consumer_thread.join()
-      logger_thread.join()
-      print("threads successfully closed")
+    consumer_thread.join()
+    logger_thread.join()
+    print("threads successfully closed")
   
   
 if __name__ == '__main__':
