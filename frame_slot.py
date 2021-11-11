@@ -46,7 +46,7 @@ class FrameSlot():
     # Taking care of all the object frame
     self.frame_object.id = self.frames_produced
     self.frame_object.raw_frame = raw_frame
-    self.frame_object.creation_timestamp = time.time()
+    self.frame_object.creation_timestamp = time.time() # ATTENZIONE QUESTO CAMPO NON VA INIZIALIZZATO QUI
     self.frame_object.service_timestamp = None
     self.frame_object.completion_timestamp = None
     

@@ -1,5 +1,3 @@
-#@title Imports and function definitions
-
 # import the opencv library
 import cv2
 import time
@@ -25,6 +23,52 @@ import threading
 import sys
 import psutil
 import logging
+
+'''
+This script waits for cameras to connect and insert each frame that arrives in the proper FrameSlot
+There is also another thread that consumes frames with RR extraction and another thread to track the CPU and Memory utilization
+Input: number of cameras that will connect to it, name of the log file to produce, the period of measures of utilization [s]
+Output: log file with all the relevant info for statistical analysis
+'''
+
+'''
+TODO:
+      1) il consumatore non scrive nel file di log
+      2) creare server che aspetta le connessioni (tutte? chiarire se bisogna sincronizzare camere e consumatore)
+      3) inserimento dei frame correttamente nei FrameSlot
+      4) rimuovere le sleep inutili
+
+'''
+
+def track_utilization(run_event, logger, seconds):
+  while run_event.is_set():
+    print("Eseguo track utilization") # DEBUG
+    logger.info(f"CPU percentage: {psutil.cpu_percent(interval=seconds)}")
+    logger.info(f"Memory percentage: {psutil.virtual_memory().percent}")
+
+
+def check_int(int_str):
+  
+  try:
+    int(int_str)
+
+  except ValueError:
+    print("{} not an int!".format(int_str))
+    return False
+
+  return True
+
+
+def logger_setup(log_file):
+  # Remove all handlers associated with the root logger object. 
+  for handler in logging.root.handlers[:]:
+    logging.root.removeHandler(handler)
+  
+  # logger configuration
+  LOG_FORMAT = "%(levelname)s %(asctime)s %(message)s" 
+  logging.basicConfig(filename=log_file, level=logging.DEBUG, format=LOG_FORMAT, filemode="w")
+  return logging.getLogger()
+
 
 def resize_image(raw_frame, new_width, new_height):
   
@@ -146,7 +190,7 @@ def run_detector(detector, img, setup = False):
         )
     '''
     #save_image(image_with_boxes, "result.jpg")
-    
+
 
 # Returns the frame and the next index from which to start the next round_robin_consume
 def round_robin_consume(fs_list, start_index): 
@@ -179,9 +223,9 @@ def consume(detector, fs_list, run_event):
     frame_object, fs_index = round_robin_consume(fs_list, fs_index)
 
     if frame_object == None:
-        print("All frame slots were empty")
-        time.sleep(1)
-        continue
+      print("All frame slots were empty")
+      time.sleep(1) # DEBUG
+      continue
     
     img = resize_image(frame_object.raw_frame, 1280, 856)
     run_detector(detector, img)
@@ -191,113 +235,50 @@ def consume(detector, fs_list, run_event):
 
     # Attention: the frames analysed are not saved anywhere!
     frame_object.completion_timestamp = time.time()
-    
-
-def produce(fs, run_event):
-  video_path = 'Rec_20200125_170152_211_S.mp4'
-
-  # Define a video capture object
-  cap = cv2.VideoCapture(video_path)
-
-  # For cyclical playback of videos
-  total_num_frames = cap.get(7)
-  frame_count = 0
-
-  # To playback at the right framerate
-  fps = cap.get(cv2.CAP_PROP_FPS)
-  prev_update_timestamp = 0
-
-
-  print("Producing...", str(fs.id)) # DEBUG
-  i = 0 # DEBUG
-
-  while cap.isOpened() and run_event.is_set():
-    
-    # How much time from the extraction of the last frame?
-    time_elapsed = time.time() - prev_update_timestamp 
-
-    if time_elapsed > 1./fps:
-
-      frame_count = frame_count + 1
-
-      if frame_count == total_num_frames:
-        print("========= Producer", str(fs.id), "is restarting the video reproduction =======") # DEBUG
-        frame_count = 1
-        cap.release()
-        cap = cv2.VideoCapture(video_path)
-      
-      # Get a new frame
-      ret, frame = cap.read()
-
-      # No more frames
-      if not ret:
-        print("The frames of the video are finished -> Producer",str(fs.id), "exiting")
-        break
-
-      fs.update_frame(frame)
-      prev_update_timestamp = time.time()
-
-      print("Inserted frame: ", str(i), "from producer", str(fs.id)) # DEBUG
-      i = i + 1 # DEBUG
-
-  # After the loop release the cap object
-  cap.release()
-
-
-def track_utilization(run_event, logger):
-  while run_event.is_set():
-    print("Eseguo track utilization") # DEBUG
-    logger.info(f"CPU percentage: {psutil.cpu_percent(interval=2)}")
-    logger.info(f"Memory percentage: {psutil.virtual_memory().percent}")
 
 
 def main():
-  # Print Tensorflow version
-  print(tf.__version__)
+
+  # Check arguments
+  n_arguments = len(sys.argv)
+  if n_arguments != 4:
+    exit("The number of argument is not correct\nPlease provide: number of cameras expected to connect, the name of the log file and the period of measures of utilization [s]")
+  
+  if not check_int(sys.argv[1]) and not check_int(sys.argv[3]): # we are just gonna trust the name of the log file
+    exit()
+  
+  n_cameras = int(sys.argv[1])
+  log_file = sys.argv[2]
+  n_seconds = sys.argv[3]
+  print("Arguments are OK")
 
   # Check available GPU devices.
   print("The following GPU devices are available: %s" % tf.test.gpu_device_name())
 
   # Get the detector
-  module_handle = "https://tfhub.dev/google/faster_rcnn/openimages_v4/inception_resnet_v2/1" #@param ["https://tfhub.dev/google/openimages_v4/ssd/mobilenet_v2/1", "https://tfhub.dev/google/faster_rcnn/openimages_v4/inception_resnet_v2/1"]
+  module_handle = "https://tfhub.dev/google/faster_rcnn/openimages_v4/inception_resnet_v2/1"
   detector = hub.load(module_handle).signatures['default']
 
-  # Warning: no checks performed
-  n_producers = int(sys.argv[1])
-
   # Prepare the frameslot list
-  fs_list = [FrameSlot(id) for id in range(1,n_producers + 1)]
+  fs_list = [FrameSlot(id) for id in range(1,n_cameras + 1)]
 
-  # Remove all handlers associated with the root logger object. 
-  for handler in logging.root.handlers[:]:
-    logging.root.removeHandler(handler)
-
-  # logger configuration
-  LOG_FORMAT = "%(levelname)s %(asctime)s %(message)s" 
-  logging.basicConfig(filename="test.log", level=logging.DEBUG, format=LOG_FORMAT, filemode="w")
-  logger = logging.getLogger()
+  logger = logger_setup(log_file)
 
   # Event to terminate threads with ctrl + C
   run_event = threading.Event()
   run_event.set()
 
   # Preparing threads
-  producer_threads = [threading.Thread(target = produce, args = (fs_list[i], run_event)) for i in range(n_producers)]
-  logger_thread = threading.Thread(target = track_utilization, args = (run_event, logger))
+  logger_thread = threading.Thread(target = track_utilization, args = (run_event, logger, n_seconds))
   consumer_thread = threading.Thread(target = consume, args = (detector, fs_list, run_event))
 
   # Load the detector on the GPU via a call on an empty tensor
   load_model_on_GPU(detector)
 
-  # Starting producer threads
-  for th in producer_threads:
-    th.start()
-
   logger_thread.start()
   time.sleep(.5)
   consumer_thread.start()
   
-
   try:
     while 1:
       time.sleep(.1)
@@ -306,14 +287,11 @@ def main():
     run_event.clear()
 
     # Waiting for threads to close
-    for th in producer_threads:
-      th.join()
-
     consumer_thread.join()
     logger_thread.join()
     print("threads successfully closed")
   
   
+
 if __name__ == '__main__':
   main()
-
