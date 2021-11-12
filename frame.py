@@ -6,6 +6,7 @@ class Frame():
 
 	# id specifies which frame this is in the series of frames within a video stream
 	id = None
+	id_slot = None
 	# raw_frame is the actual ndarray
 	raw_frame = None
 	creation_timestamp = None
@@ -21,6 +22,7 @@ class Frame():
 	def copy_attributes(self, frame_obj):
 		
 		self.id = frame_obj.id
+		self.id_slot = frame_obj.id_slot
 		self.raw_frame = frame_obj.raw_frame
 		self.creation_timestamp = frame_obj.creation_timestamp
 		self.service_timestamp = frame_obj.service_timestamp
