@@ -8,7 +8,6 @@ import handle_new_frame_pb2_grpc
 
 import numpy as np
 import base64
-import zlib
 import time
 
 if __name__ == '__main__':

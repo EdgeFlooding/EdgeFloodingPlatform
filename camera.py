@@ -1,8 +1,15 @@
+import grpc
+
+# import the generated classes
+import handle_new_frame_pb2
+import handle_new_frame_pb2_grpc
+
 # import the opencv library
 import cv2
 import time
 import sys
 import ipaddress
+import base64
 
 '''
 This is a single thread producer script emulating a camera
@@ -13,7 +20,7 @@ and extracted cyclically
 '''
 
 
-def produce(id_frame_slot, ip_consumer):
+def produce(stub, id_frame_slot, ip_consumer):
     video_path = 'videos/Rec_20200125_170152_211_S.mp4'
 
     # Define a video capture object
@@ -29,7 +36,7 @@ def produce(id_frame_slot, ip_consumer):
 
 
     print("Producing...", str(id_frame_slot)) # DEBUG
-    i = 0 # DEBUG
+    i = 1 # DEBUG
 
     while cap.isOpened():
 
@@ -54,11 +61,15 @@ def produce(id_frame_slot, ip_consumer):
                 print("The frames of the video are finished -> Producer",str(id_frame_slot), "exiting")
                 break
 
-            # =================== INSERT CALL TO SEND FRAME WITH RPC (ricorda il creation timestamp) =============================== #
 
+            b64_frame = base64.b64encode(frame)
+            frame_req = handle_new_frame_pb2.Frame(id=i, id_slot=id_frame_slot, b64image=b64_frame, width=frame.shape[0], height=frame.shape[1],
+                                                   creation_timestamp=time.time())
+            # make the call
+            response = stub.HandleNewFrame(frame_req)
             prev_update_timestamp = time.time()
 
-            print("Inserted frame:", str(i), "from producer", str(id_frame_slot)) # DEBUG
+            print("Sent frame:", str(i), "from producer", str(id_frame_slot)) # DEBUG
             i = i + 1 # DEBUG
 
     # After the loop release the cap object
@@ -82,8 +93,8 @@ def check_ip_address(address_str):
     try:
         ip = ipaddress.ip_address(address_str)
 
-        if not isinstance(ip, ipaddress.IPv6Address):
-            print("{} is not an IPv6 address".format(address_str))
+        if not isinstance(ip, ipaddress.IPv4Address) or not isinstance(ip, ipaddress.IPv6Address):
+            print("{} is not an IPv4 nor an IPv6 address".format(address_str))
             return False
 
     except ValueError:
@@ -110,7 +121,11 @@ def main():
 
     print("All good, extracting frames...")
     try:
-        produce(id_frame_slot, ip_consumer)
+        # open a gRPC channel
+        channel = grpc.insecure_channel(f'{ip_consumer}:5005')
+        # create a stub (client)
+        stub = handle_new_frame_pb2_grpc.FrameProcedureStub(channel)
+        produce(stub, id_frame_slot, ip_consumer)
     except:
         exit("Exiting gracefully...")
 

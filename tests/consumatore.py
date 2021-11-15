@@ -10,7 +10,7 @@ import handle_new_frame_pb2_grpc
 
 import numpy as np 
 import base64
-import zlib
+
 
 def B64_to_numpy_array(b64img_compressed, w, h):
     b64decoded = base64.b64decode(b64img_compressed)
