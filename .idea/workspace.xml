@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="AutoImportSettings">
+    <option name="autoReloadType" value="SELECTIVE" />
+  </component>
+  <component name="ChangeListManager">
+    <list default="true" id="6207b9ab-2021-4403-8114-ea9281007c8d" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/camera.py" beforeDir="false" afterPath="$PROJECT_DIR$/camera.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frame.py" beforeDir="false" afterPath="$PROJECT_DIR$/frame.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frame_slot.py" beforeDir="false" afterPath="$PROJECT_DIR$/frame_slot.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/inference.py" beforeDir="false" afterPath="$PROJECT_DIR$/inference.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/tests/consumatore.py" beforeDir="false" afterPath="$PROJECT_DIR$/tests/consumatore.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/tests/handle_new_frame_pb2.py" beforeDir="false" afterPath="$PROJECT_DIR$/tests/handle_new_frame_pb2.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/tests/produttore.py" beforeDir="false" afterPath="$PROJECT_DIR$/tests/produttore.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/tests/utilization.py" beforeDir="false" afterPath="$PROJECT_DIR$/tests/utilization.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/tests/visualize_frames.py" beforeDir="false" afterPath="$PROJECT_DIR$/tests/visualize_frames.py" afterDir="false" />
+    </list>
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
+  <component name="ProjectId" id="20x55TBmKfbA4ONlCwZ180p3QLl" />
+  <component name="ProjectLevelVcsManager" settingsEditedManually="true" />
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent">
+    <property name="RunOnceActivity.OpenProjectViewOnStart" value="true" />
+    <property name="RunOnceActivity.ShowReadmeOnStart" value="true" />
+    <property name="last_opened_file_path" value="$PROJECT_DIR$" />
+    <property name="settings.editor.selected.configurable" value="terminal" />
+  </component>
+  <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="6207b9ab-2021-4403-8114-ea9281007c8d" name="Changes" comment="" />
+      <created>1636973216800</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1636973216800</updated>
+    </task>
+    <servers />
+  </component>
+</project>
