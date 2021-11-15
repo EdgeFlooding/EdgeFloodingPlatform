@@ -7,10 +7,8 @@
     <list default="true" id="6207b9ab-2021-4403-8114-ea9281007c8d" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/camera.py" beforeDir="false" afterPath="$PROJECT_DIR$/camera.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/inference.py" beforeDir="false" afterPath="$PROJECT_DIR$/inference.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/tests/consumatore.py" beforeDir="false" afterPath="$PROJECT_DIR$/tests/consumatore.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tests/handle_new_frame_pb2.py" beforeDir="false" afterPath="$PROJECT_DIR$/handle_new_frame_pb2.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tests/handle_new_frame_pb2_grpc.py" beforeDir="false" afterPath="$PROJECT_DIR$/handle_new_frame_pb2_grpc.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tests/produttore.py" beforeDir="false" afterPath="$PROJECT_DIR$/tests/produttore.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -30,7 +28,7 @@
     <property name="RunOnceActivity.OpenProjectViewOnStart" value="true" />
     <property name="RunOnceActivity.ShowReadmeOnStart" value="true" />
     <property name="last_opened_file_path" value="$PROJECT_DIR$/tests" />
-    <property name="settings.editor.selected.configurable" value="reference.settingsdialog.IDE.editor.colors" />
+    <property name="settings.editor.selected.configurable" value="preferences.keymap" />
   </component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
@@ -61,5 +59,6 @@
         </entry>
       </map>
     </option>
+    <option name="oldMeFiltersMigrated" value="true" />
   </component>
 </project>

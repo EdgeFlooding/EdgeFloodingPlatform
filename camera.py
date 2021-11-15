@@ -63,7 +63,7 @@ def produce(stub, id_frame_slot, ip_consumer):
 
 
             b64_frame = base64.b64encode(frame)
-            frame_req = handle_new_frame_pb2.Frame(id=i, id_slot=id_frame_slot, b64image=b64_frame, width=frame.shape[0], height=frame.shape[1],
+            frame_req = handle_new_frame_pb2.Frame(id=i, id_slot=id_frame_slot, b64image=b64_frame, width=frame.shape[1], height=frame.shape[0],
                                                    creation_timestamp=time.time())
             # make the call
             response = stub.HandleNewFrame(frame_req)
@@ -71,6 +71,7 @@ def produce(stub, id_frame_slot, ip_consumer):
 
             print("Sent frame:", str(i), "from producer", str(id_frame_slot)) # DEBUG
             i = i + 1 # DEBUG
+            exit("Eliminare questa exit dopo i test")
 
     # After the loop release the cap object
     cap.release()
@@ -93,7 +94,7 @@ def check_ip_address(address_str):
     try:
         ip = ipaddress.ip_address(address_str)
 
-        if not isinstance(ip, ipaddress.IPv4Address) or not isinstance(ip, ipaddress.IPv6Address):
+        if not isinstance(ip, ipaddress.IPv4Address) and not isinstance(ip, ipaddress.IPv6Address):
             print("{} is not an IPv4 nor an IPv6 address".format(address_str))
             return False
 
@@ -126,8 +127,9 @@ def main():
         # create a stub (client)
         stub = handle_new_frame_pb2_grpc.FrameProcedureStub(channel)
         produce(stub, id_frame_slot, ip_consumer)
-    except:
-        exit("Exiting gracefully...")
+    except Exception as e:
+        print(e)
+        exit("Exiting...")
 
 
 if __name__ == '__main__':

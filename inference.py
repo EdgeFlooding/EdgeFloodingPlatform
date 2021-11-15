@@ -1,10 +1,13 @@
-# import the opencv library
-import cv2
-import time
-
 # For running inference on the TF-Hub module.
 import tensorflow as tf
 import tensorflow_hub as hub
+
+import grpc
+from concurrent import futures
+# import the generated classes
+import handle_new_frame_pb2
+import handle_new_frame_pb2_grpc
+import base64
 
 # For downloading the image.
 import matplotlib.pyplot as plt
@@ -18,7 +21,7 @@ from PIL import ImageFont
 from PIL import ImageOps
 
 from frame_slot import FrameSlot
-
+import time
 import threading
 import sys
 import psutil
@@ -183,13 +186,13 @@ def run_detector(detector, img, setup = False):
         print("Found %d objects." % len(result["detection_scores"]))
         print("Inference time: ", end_time-start_time)
 
-        '''
+
         image_with_boxes = draw_boxes(
-            resized_frame.numpy(), result["detection_boxes"],
+            img.numpy(), result["detection_boxes"],
             result["detection_class_entities"], result["detection_scores"]
             )
-        '''
-        #save_image(image_with_boxes, "result.jpg")
+
+        save_image(image_with_boxes, "result.jpg")
 
 
 # Returns the frame and the next index from which to start the next round_robin_consume
@@ -237,6 +240,57 @@ def consume(detector, fs_list, run_event):
         frame_object.completion_timestamp = time.time()
 
 
+# ===================  gRPC SERVER FUNCTIONS ======================= #
+def B64_to_numpy_array(b64img_compressed, w, h):
+    b64decoded = base64.b64decode(b64img_compressed)
+
+    decompressed = b64decoded #zlib.decompress(b64decoded)
+
+    return np.frombuffer(decompressed, dtype=np.uint8).reshape(w, h, -1)
+
+
+class FrameProcedureServicer(handle_new_frame_pb2_grpc.FrameProcedureServicer):
+
+    def __init__(self, detector):
+        self.detector = detector
+
+    def HandleNewFrame(self, request, context):
+        response = handle_new_frame_pb2.Empty()
+        print("New Frame received")
+        print("id:", request.id)
+        print("id_slot:", request.id_slot)
+        print("width:", request.width)
+        print("height", request.height)
+        print("cr_tmp", request.creation_timestamp)
+        raw_frame = B64_to_numpy_array(request.b64image, request.width, request.height)
+
+        # DEBUG TESTARE DETECTOR
+        img = resize_image(raw_frame, 1280, 856)
+        run_detector(self.detector, img)
+        print("=======================")
+
+        return response
+
+
+def start_server(detector):
+    # create a gRPC server
+    server = grpc.server(futures.ThreadPoolExecutor(max_workers=12))
+
+
+    # add the defined class to the server
+    handle_new_frame_pb2_grpc.add_FrameProcedureServicer_to_server(
+            FrameProcedureServicer(detector), server)
+
+    # listen on port 5005
+    print('Starting server. Listening on port 5005.')
+    server.add_insecure_port('[::]:5005')
+    server.start()
+
+    return server
+
+# =================== END OF gRPC SERVER FUNCTIONS ===================== #
+
+
 def main():
 
     # Check arguments
@@ -275,9 +329,10 @@ def main():
     # Load the detector on the GPU via a call on an empty tensor
     load_model_on_GPU(detector)
 
-    logger_thread.start()
+    #logger_thread.start()
     time.sleep(.5)
-    consumer_thread.start()
+    #consumer_thread.start()
+    server = start_server(detector)
 
     try:
         while 1:
@@ -287,8 +342,9 @@ def main():
         run_event.clear()
 
         # Waiting for threads to close
-        consumer_thread.join()
-        logger_thread.join()
+        #consumer_thread.join()
+        #logger_thread.join()
+        server.stop(0)
         print("threads successfully closed")
 
 
