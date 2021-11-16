@@ -266,7 +266,6 @@ class FrameProcedureServicer(handle_new_frame_pb2_grpc.FrameProcedureServicer):
         height = request.height
         creation_timestamp = request.creation_timestamp
 
-        response = handle_new_frame_pb2.Empty()
         print("New Frame received")
         print("id:", id)
         print("id_slot:", id_slot)
@@ -276,15 +275,18 @@ class FrameProcedureServicer(handle_new_frame_pb2_grpc.FrameProcedureServicer):
         # Decode raw_frame
         raw_frame = B64_to_numpy_array(request.b64image, width, height)
 
+        response = handle_new_frame_pb2.Empty()
+
         # check the slot id with size of fs_list
         if id_slot not in range(1, len(self.fs_list) + 1):
             print(f"[ERROR] id_slot: {id_slot} does not exist!")
+            return response
 
         # create Frame to update the Frame Slot
         new_frame = Frame(id, id_slot, raw_frame, creation_timestamp)
 
         # update Frame Slot
-        self.fs_list[id_slot].update_frame(new_frame)
+        self.fs_list[id_slot - 1].update_frame(new_frame)
 
         # DEBUG PRINT
         print(f"[DEBUG] inserted Frame with id: {id} in frame slot: {id_slot}")
@@ -348,7 +350,7 @@ def main():
     consumer_thread = threading.Thread(target = consume, args = (detector, fs_list, run_event))
 
     # Load the detector on the GPU via a call on an empty tensor
-    load_model_on_GPU(detector)
+    #load_model_on_GPU(detector)
 
     #logger_thread.start()
     time.sleep(.5)
@@ -360,7 +362,7 @@ def main():
             time.sleep(5)
     except KeyboardInterrupt:
         print("\nattempting to close threads")
-        server.stop()
+        server.stop(0)
         run_event.clear()
 
         # Waiting for threads to close
