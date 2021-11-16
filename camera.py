@@ -63,15 +63,16 @@ def produce(stub, id_frame_slot, ip_consumer):
 
 
             b64_frame = base64.b64encode(frame)
-            frame_req = handle_new_frame_pb2.Frame(id=id_frame, id_slot=id_frame_slot, b64image=b64_frame, width=frame.shape[1], height=frame.shape[0],
-                                                   creation_timestamp=time.time())
+            frame_req = handle_new_frame_pb2.Frame(id=id_frame, id_slot=id_frame_slot, b64image=b64_frame, width=frame.shape[1],
+             height=frame.shape[0], creation_timestamp=time.time())
+            
             # make the call
             response = stub.HandleNewFrame(frame_req)
             prev_update_timestamp = time.time()
 
             print("Sent frame:", str(id_frame), "from producer", str(id_frame_slot)) # DEBUG
             id_frame = id_frame + 1
-            exit("Eliminare questa exit dopo i test")
+            time.sleep(3)
 
     # After the loop release the cap object
     cap.release()

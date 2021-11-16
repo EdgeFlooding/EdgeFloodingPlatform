@@ -26,6 +26,7 @@ class FrameSlot():
     # does it store a new frame?
     empty = True
     lock = Lock()
+    frame_object = None
     # counters to track frames produced and consumed
     frames_produced = 0
     frames_consumed = 0
@@ -34,21 +35,20 @@ class FrameSlot():
     def __init__(self, id):
         # id to identify which camera is producing to this slot
         self.id = id
-        self.frame_object = Frame(id)
 
 
     # called by the producer
     @synchronized(lock)
-    def update_frame(self, raw_frame):
-
+    def update_frame(self, frame : Frame):
+        
+        if frame.id_slot != self.id:
+            print(f"[ERROR] The Frame with id_slot: {frame.id_slot} cannot be insertid in FrameSlot: {self.id}")
+            return
+        
         self.empty = False
 
-        # Taking care of all the object frame
-        self.frame_object.id = self.frames_produced
-        self.frame_object.raw_frame = raw_frame
-        self.frame_object.creation_timestamp = time.time() # ATTENZIONE QUESTO CAMPO NON VA INIZIALIZZATO QUI
-        self.frame_object.service_timestamp = None
-        self.frame_object.completion_timestamp = None
+        # Updating the frame_object
+        self.frame_object = frame
 
         self.frames_produced = self.frames_produced + 1
         #print("Frame prodotti: ", self.frames_produced)

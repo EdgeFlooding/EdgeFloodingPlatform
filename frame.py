@@ -18,6 +18,12 @@ class Frame():
         # id_slot is going to be the same as frame_slot id
         self.id_slot = id_slot
 
+    # Custom constructor for server
+    def __init__(self, id, id_slot, raw_frame, creation_timestamp):
+        self.id = id
+        self.id_slot = id_slot
+        self.raw_frame = raw_frame
+        self.creation_timestamp = creation_timestamp
 
     def copy_attributes(self, frame_obj):
 

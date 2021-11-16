@@ -21,6 +21,7 @@ from PIL import ImageFont
 from PIL import ImageOps
 
 from frame_slot import FrameSlot
+from frame import Frame
 import time
 import threading
 import sys
@@ -37,9 +38,8 @@ Output: log file with all the relevant info for statistical analysis
 '''
 TODO:
       1) il consumatore non scrive nel file di log
-      2) creare server che aspetta le connessioni (tutte? chiarire se bisogna sincronizzare camere e consumatore)
-      3) inserimento dei frame correttamente nei FrameSlot
-      4) rimuovere le sleep inutili
+      2) inserimento dei frame correttamente nei FrameSlot
+      3) rimuovere le sleep inutili
 
 '''
 
@@ -255,36 +255,52 @@ def B64_to_numpy_array(b64img_compressed, w, h):
 
 class FrameProcedureServicer(handle_new_frame_pb2_grpc.FrameProcedureServicer):
 
-    def __init__(self, detector):
-        self.detector = detector
+    def __init__(self, fs_list):
+        self.fs_list = fs_list
 
     def HandleNewFrame(self, request, context):
+
+        id = request.id
+        id_slot = request.id_slot
+        width = request.width
+        height = request.height
+        creation_timestamp = request.creation_timestamp
+
         response = handle_new_frame_pb2.Empty()
         print("New Frame received")
-        print("id:", request.id)
-        print("id_slot:", request.id_slot)
-        print("width:", request.width)
-        print("height", request.height)
-        print("cr_tmp", request.creation_timestamp)
-        raw_frame = B64_to_numpy_array(request.b64image, request.width, request.height)
+        print("id:", id)
+        print("id_slot:", id_slot)
+        print("width:", width)
+        print("height", height)
+        print("cr_tmp", creation_timestamp)
+        # Decode raw_frame
+        raw_frame = B64_to_numpy_array(request.b64image, width, height)
 
-        # DEBUG TESTARE DETECTOR
-        img = resize_image(raw_frame, 1280, 856)
-        run_detector(self.detector, img)
+        # check the slot id with size of fs_list
+        if id_slot not in range(1, len(self.fs_list) + 1):
+            print(f"[ERROR] id_slot: {id_slot} does not exist!")
 
+        # create Frame to update the Frame Slot
+        new_frame = Frame(id, id_slot, raw_frame, creation_timestamp)
+
+        # update Frame Slot
+        self.fs_list[id_slot].update_frame(new_frame)
+
+        # DEBUG PRINT
+        print(f"[DEBUG] inserted Frame with id: {id} in frame slot: {id_slot}")
         print("=======================")
 
         return response
 
 
-def start_server(detector):
+def start_server(fs_list):
     # create a gRPC server
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=12))
 
 
     # add the defined class to the server
     handle_new_frame_pb2_grpc.add_FrameProcedureServicer_to_server(
-            FrameProcedureServicer(detector), server)
+            FrameProcedureServicer(fs_list), server)
 
     # listen on port 5005
     print('Starting server. Listening on port 5005.')
@@ -308,7 +324,7 @@ def main():
 
     n_cameras = int(sys.argv[1])
     log_file = sys.argv[2]
-    n_seconds = sys.argv[3]
+    n_seconds = int(sys.argv[3])
     print("Arguments are OK")
 
     # Check available GPU devices.
@@ -337,14 +353,14 @@ def main():
     #logger_thread.start()
     time.sleep(.5)
     #consumer_thread.start()
-    server = start_server(detector)
+    server = start_server(fs_list)
 
     try:
         while 1:
             time.sleep(5)
     except KeyboardInterrupt:
         print("\nattempting to close threads")
-        server.stop(0)
+        server.stop()
         run_event.clear()
 
         # Waiting for threads to close
