@@ -72,7 +72,7 @@ def produce(stub, id_frame_slot, ip_consumer):
 
             print("Sent frame:", str(id_frame), "from producer", str(id_frame_slot)) # DEBUG
             id_frame = id_frame + 1
-            time.sleep(5)
+            
 
     # After the loop release the cap object
     cap.release()

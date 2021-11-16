@@ -13,14 +13,9 @@ class Frame():
     service_timestamp = None
     completion_timestamp = None
 
-    # Regular constructor
-    def __init__(self, id_slot):
-        # id_slot is going to be the same as frame_slot id
-        self.id_slot = id_slot
-
-    # Custom constructor for server
-    def __init__(self, id, id_slot, raw_frame, creation_timestamp):
+    def __init__(self, id = None, id_slot = None, raw_frame = None, creation_timestamp = None):
         self.id = id
+        # id_slot is going to be the same as frame_slot id
         self.id_slot = id_slot
         self.raw_frame = raw_frame
         self.creation_timestamp = creation_timestamp

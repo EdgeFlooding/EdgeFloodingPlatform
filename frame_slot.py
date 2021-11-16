@@ -26,7 +26,7 @@ class FrameSlot():
     # does it store a new frame?
     empty = True
     lock = Lock()
-    frame_object = None
+    frame_object = Frame()
     # counters to track frames produced and consumed
     frames_produced = 0
     frames_consumed = 0
@@ -48,7 +48,7 @@ class FrameSlot():
         self.empty = False
 
         # Updating the frame_object
-        self.frame_object = frame
+        self.frame_object.copy_attributes(frame)
 
         self.frames_produced = self.frames_produced + 1
         #print("Frame prodotti: ", self.frames_produced)
@@ -63,14 +63,14 @@ class FrameSlot():
 
         self.empty = True
 
-        self.frame_object.service_timestamp = time.time()
-
         self.frames_consumed = self.frames_consumed + 1
         #print("Frame consumati: ", self.frames_consumed)
 
         # I need to return a new Frame obj to avoid working on the same reference
-        return_obj = Frame(self.id)
+        return_obj = Frame()
         return_obj.copy_attributes(self.frame_object)
+        # Remember to set the service time stamp
+        return_obj.service_timestamp = time.time()
 
         return return_obj
 

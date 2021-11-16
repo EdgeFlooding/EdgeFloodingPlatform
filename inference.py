@@ -38,8 +38,7 @@ Output: log file with all the relevant info for statistical analysis
 '''
 TODO:
       1) il consumatore non scrive nel file di log
-      2) inserimento dei frame correttamente nei FrameSlot
-      3) rimuovere le sleep inutili
+      2) rimuovere le sleep inutili
 
 '''
 
@@ -178,15 +177,12 @@ def run_detector(detector, img, setup = False):
     result = detector(img)
     end_time = time.time()
 
-    
-
     if setup is False:
         print("Found %d objects." % len(result["detection_scores"]))
         print("Inference time: ", end_time-start_time)
 
         '''
         result = {key:value.numpy() for key,value in result.items()}
-
         
         image_with_boxes = draw_boxes(
             img.numpy(), result["detection_boxes"],
@@ -221,7 +217,7 @@ def round_robin_consume(fs_list, start_index):
 
 def consume(detector, fs_list, run_event):
     print("Consuming...") # DEBUG
-    i = 1 # DEBUG
+    num_frames_analysed = 0 # DEBUG
 
     fs_index = 0
 
@@ -237,12 +233,12 @@ def consume(detector, fs_list, run_event):
         img = resize_image(frame_object.raw_frame, 1280, 856)
         run_detector(detector, img)
 
-        print("Analysed: ", str(i), "Frames, it was the one with id: ", str(frame_object.id), "coming from frame slot: ", str(frame_object.id_slot)) # DEBUG
-        i = i + 1 # DEBUG
-
         # Attention: the frames analysed are not saved anywhere!
         frame_object.completion_timestamp = time.time()
 
+        num_frames_analysed = num_frames_analysed + 1 # DEBUG
+        print("Analysed: ", str(num_frames_analysed), "Frames, it was the one with id: ", str(frame_object.id), "coming from frame slot: ", str(frame_object.id_slot)) # DEBUG
+        
 
 # ===================  gRPC SERVER FUNCTIONS ======================= #
 def B64_to_numpy_array(b64img_compressed, w, h):
@@ -266,12 +262,14 @@ class FrameProcedureServicer(handle_new_frame_pb2_grpc.FrameProcedureServicer):
         height = request.height
         creation_timestamp = request.creation_timestamp
 
+        '''
         print("New Frame received")
         print("id:", id)
         print("id_slot:", id_slot)
         print("width:", width)
         print("height", height)
         print("cr_tmp", creation_timestamp)
+        '''
         # Decode raw_frame
         raw_frame = B64_to_numpy_array(request.b64image, width, height)
 
@@ -350,11 +348,11 @@ def main():
     consumer_thread = threading.Thread(target = consume, args = (detector, fs_list, run_event))
 
     # Load the detector on the GPU via a call on an empty tensor
-    #load_model_on_GPU(detector)
+    load_model_on_GPU(detector)
 
     #logger_thread.start()
     time.sleep(.5)
-    #consumer_thread.start()
+    consumer_thread.start()
     server = start_server(fs_list)
 
     try:
@@ -366,7 +364,7 @@ def main():
         run_event.clear()
 
         # Waiting for threads to close
-        #consumer_thread.join()
+        consumer_thread.join()
         #logger_thread.join()
         
         print("threads successfully closed")
