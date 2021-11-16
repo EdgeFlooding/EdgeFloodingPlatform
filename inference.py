@@ -160,9 +160,7 @@ def draw_boxes(image, boxes, class_names, scores, max_boxes=10, min_score=0.1):
 
 
 def save_image(image, image_name):
-    plt.grid(False)
-    plt.imshow(image)
-    plt.savefig(image_name)
+    Image.fromarray(image).save(image_name)
 
 
 def load_model_on_GPU(detector):
@@ -180,19 +178,25 @@ def run_detector(detector, img, setup = False):
     result = detector(img)
     end_time = time.time()
 
-    result = {key:value.numpy() for key,value in result.items()}
+    
 
     if setup is False:
         print("Found %d objects." % len(result["detection_scores"]))
         print("Inference time: ", end_time-start_time)
 
+        '''
+        result = {key:value.numpy() for key,value in result.items()}
 
+        
         image_with_boxes = draw_boxes(
             img.numpy(), result["detection_boxes"],
             result["detection_class_entities"], result["detection_scores"]
             )
-
+        
         save_image(image_with_boxes, "result.jpg")
+
+        return result
+        '''
 
 
 # Returns the frame and the next index from which to start the next round_robin_consume
@@ -246,7 +250,7 @@ def B64_to_numpy_array(b64img_compressed, w, h):
 
     decompressed = b64decoded #zlib.decompress(b64decoded)
 
-    return np.frombuffer(decompressed, dtype=np.uint8).reshape(w, h, -1)
+    return np.frombuffer(decompressed, dtype=np.uint8).reshape(h, w, -1)
 
 
 class FrameProcedureServicer(handle_new_frame_pb2_grpc.FrameProcedureServicer):
@@ -267,6 +271,7 @@ class FrameProcedureServicer(handle_new_frame_pb2_grpc.FrameProcedureServicer):
         # DEBUG TESTARE DETECTOR
         img = resize_image(raw_frame, 1280, 856)
         run_detector(self.detector, img)
+
         print("=======================")
 
         return response
@@ -336,15 +341,16 @@ def main():
 
     try:
         while 1:
-            time.sleep(.1)
+            time.sleep(5)
     except KeyboardInterrupt:
         print("\nattempting to close threads")
+        server.stop(0)
         run_event.clear()
 
         # Waiting for threads to close
         #consumer_thread.join()
         #logger_thread.join()
-        server.stop(0)
+        
         print("threads successfully closed")
 
 
