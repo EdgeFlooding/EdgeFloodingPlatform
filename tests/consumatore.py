@@ -50,6 +50,7 @@ class FrameProcedureServicer(handle_new_frame_pb2_grpc.FrameProcedureServicer):
 
     def HandleNewFrame(self, request, context):
         response = handle_new_frame_pb2.Empty()
+        '''
         print("New Frame received")
         print("id:", request.id)
         print("id_slot:", request.id_slot)
@@ -59,6 +60,9 @@ class FrameProcedureServicer(handle_new_frame_pb2_grpc.FrameProcedureServicer):
         raw_frame = B64_to_numpy_array(request.b64image, request.width, request.height)
         img = resize_image(raw_frame, 1280, 856)
         save_image(raw_frame, "prova.jpg")
+        '''
+        print(request.ByteSize())
+
         print("=======================")
 
         return response

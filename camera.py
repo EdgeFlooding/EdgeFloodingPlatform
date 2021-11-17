@@ -36,6 +36,7 @@ def produce(stub, id_frame_slot, ip_consumer, channel):
 
 
     print("Producing...", str(id_frame_slot)) # DEBUG
+    print("Waiting for server...")
     id_frame = 1
 
     while cap.isOpened():
@@ -69,9 +70,9 @@ def produce(stub, id_frame_slot, ip_consumer, channel):
             # make the call
             while True:
                 try:
-                    stub.HandleNewFrame(frame_req, timeout = 1)
+                    stub.HandleNewFrame(frame_req)
                 except:
-                    print("The Server is not ready... Sleeping for 5 seconds")
+                    print(".")
                     time.sleep(5)
                     # recreate the channel
                     channel.close()

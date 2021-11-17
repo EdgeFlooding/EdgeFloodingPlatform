@@ -39,14 +39,14 @@ Output: log file with all the relevant info for statistical analysis
 TODO:
       1) il consumatore non scrive nel file di log
       2) rimuovere le sleep inutili
-
 '''
 
 def track_utilization(run_event, logger, seconds):
+    '''Used by the logger_thread to write utilization data on log file'''
     while run_event.is_set():
-        print("Eseguo track utilization") # DEBUG
-        logger.info(f"CPU percentage: {psutil.cpu_percent(interval=seconds)}")
-        logger.info(f"Memory percentage: {psutil.virtual_memory().percent}")
+        #print("Starting track utilization")
+        logger.info(f"[UTILIZATION] CPU percentage: {psutil.cpu_percent(interval=seconds)}")
+        logger.info(f"[UTILIZATION] Memory percentage: {psutil.virtual_memory().percent}")
 
 
 def check_int(int_str):
@@ -73,7 +73,7 @@ def logger_setup(log_file):
 
 
 def resize_image(raw_frame, new_width, new_height):
-
+    '''Transform frame into tensor for detector'''
     pil_image = Image.fromarray(np.uint8(raw_frame))
     pil_image = ImageOps.fit(pil_image, (new_width, new_height), Image.ANTIALIAS)
     pil_image_rgb = pil_image.convert("RGB")
@@ -163,6 +163,7 @@ def save_image(image, image_name):
 
 
 def load_model_on_GPU(detector):
+    '''To be called before actually using the detector on real frames'''
 
     img = np.zeros([856, 1280], np.uint8)
     img = resize_image(img, 1280, 856)
@@ -170,8 +171,8 @@ def load_model_on_GPU(detector):
     print("The model is ready")
 
 
-# if setup == True -> we are in the empty call, so no print required
 def run_detector(detector, img, setup = False):
+    '''if setup == True -> we are in the empty call, so no print required'''
 
     start_time = time.time()
     result = detector(img)
@@ -190,22 +191,21 @@ def run_detector(detector, img, setup = False):
             )
         
         save_image(image_with_boxes, "result.jpg")
-
-        return result
         '''
 
 
-# Returns the frame and the next index from which to start the next round_robin_consume
 def round_robin_consume(fs_list, start_index):
+    '''Returns the frame and the next index from which to start the next round_robin_consume'''
+
     fs_list_len = len(fs_list)
 
     current_index = start_index
     while True:
         frame_object = fs_list[current_index].consume_frame()
-        print(f"[RRC] Provo ad estrarre l'indice {current_index}")
+        #print(f"[RRC] Trying to extract Frame slot with index {current_index}")
 
         if frame_object == None:
-            print("Frame slot", str(fs_list[current_index].id) , "was empty")
+            #print("Frame slot", str(fs_list[current_index].id) , "was empty")
             current_index = (current_index + 1) % fs_list_len
 
             if current_index == start_index: # All slots are empty
@@ -213,13 +213,12 @@ def round_robin_consume(fs_list, start_index):
 
             continue
         
-        print(f"Extracted frame {frame_object.id} from FrameSlot: {frame_object.id_slot}") # DEBUG
+        #print(f"Extracted frame {frame_object.id} from FrameSlot: {frame_object.id_slot}") # DEBUG
         return frame_object, (current_index + 1) % fs_list_len
 
 
-def consume(detector, fs_list, run_event):
-    print("Consuming...") # DEBUG
-    num_frames_analysed = 0 # DEBUG
+def consume(detector, fs_list, run_event, logger):
+    print("Consuming...")
 
     fs_index = 0
 
@@ -238,8 +237,8 @@ def consume(detector, fs_list, run_event):
         # Attention: the frames analysed are not saved anywhere!
         frame_object.completion_timestamp = time.time()
 
-        num_frames_analysed = num_frames_analysed + 1 # DEBUG
-        print("Analysed: ", str(num_frames_analysed), "Frames, it was the one with id: ", str(frame_object.id), "coming from frame slot: ", str(frame_object.id_slot)) # DEBUG
+        #print("Analysed Frame with id: ", str(frame_object.id), "coming from frame slot: ", str(frame_object.id_slot))
+        logger.info(f"[INFERENCE] ID: {frame_object.id} FRAMESLOT: {frame_object.id_slot} CREATION_TS: {frame_object.creation_timestamp} SERVICE_TS: {frame_object.service_timestamp} COMPLETION_TS: {frame_object.completion_timestamp}")
         
 
 # ===================  gRPC SERVER FUNCTIONS ======================= #
@@ -253,11 +252,13 @@ def B64_to_numpy_array(b64img_compressed, w, h):
 
 class FrameProcedureServicer(handle_new_frame_pb2_grpc.FrameProcedureServicer):
 
-    def __init__(self, fs_list):
+    def __init__(self, fs_list, logger):
         self.fs_list = fs_list
+        self.logger = logger
 
     def HandleNewFrame(self, request, context):
 
+        byte_size = request.ByteSize()
         id = request.id
         id_slot = request.id_slot
         width = request.width
@@ -292,17 +293,19 @@ class FrameProcedureServicer(handle_new_frame_pb2_grpc.FrameProcedureServicer):
         print(f"[DEBUG] inserted Frame with id: {id} in frame slot: {id_slot}")
         print("=======================")
 
+        self.logger.info(f"[BYTES] Received Frame {id} in slot {id_slot} with BYTES: {byte_size}")
+
         return response
 
 
-def start_server(fs_list):
+def start_server(fs_list, logger):
     # create a gRPC server
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=12))
 
 
     # add the defined class to the server
     handle_new_frame_pb2_grpc.add_FrameProcedureServicer_to_server(
-            FrameProcedureServicer(fs_list), server)
+            FrameProcedureServicer(fs_list, logger), server)
 
     # listen on port 5005
     print('Starting server. Listening on port 5005.')
@@ -347,15 +350,15 @@ def main():
 
     # Preparing threads
     logger_thread = threading.Thread(target = track_utilization, args = (run_event, logger, n_seconds))
-    consumer_thread = threading.Thread(target = consume, args = (detector, fs_list, run_event))
+    consumer_thread = threading.Thread(target = consume, args = (detector, fs_list, run_event, logger))
 
     # Load the detector on the GPU via a call on an empty tensor
     load_model_on_GPU(detector)
 
-    #logger_thread.start()
+    logger_thread.start()
     time.sleep(.5)
     consumer_thread.start()
-    server = start_server(fs_list)
+    server = start_server(fs_list, logger)
 
     try:
         while 1:
@@ -367,7 +370,7 @@ def main():
 
         # Waiting for threads to close
         consumer_thread.join()
-        #logger_thread.join()
+        logger_thread.join()
         
         print("threads successfully closed")
 
