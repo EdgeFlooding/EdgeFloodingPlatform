@@ -20,7 +20,7 @@ and extracted cyclically
 '''
 
 
-def produce(stub, id_frame_slot, ip_consumer):
+def produce(stub, id_frame_slot):
     video_path = 'videos/Rec_20200125_170152_211_S.mp4'
 
     # Define a video capture object
@@ -72,7 +72,7 @@ def produce(stub, id_frame_slot, ip_consumer):
 
             print("Sent frame:", str(id_frame), "from producer", str(id_frame_slot)) # DEBUG
             id_frame = id_frame + 1
-            
+
 
     # After the loop release the cap object
     cap.release()
@@ -127,7 +127,7 @@ def main():
         channel = grpc.insecure_channel(f'{ip_consumer}:5005')
         # create a stub (client)
         stub = handle_new_frame_pb2_grpc.FrameProcedureStub(channel)
-        produce(stub, id_frame_slot, ip_consumer)
+        produce(stub, id_frame_slot)
     except KeyboardInterrupt:
         exit("Exiting...")
     except Exception as e:

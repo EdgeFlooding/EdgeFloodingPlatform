@@ -48,7 +48,7 @@ class FrameSlot():
         self.empty = False
 
         # Updating the frame_object
-        self.frame_object.copy_attributes(frame)
+        self.frame_object = frame
 
         self.frames_produced = self.frames_produced + 1
         #print("Frame prodotti: ", self.frames_produced)

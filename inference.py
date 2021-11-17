@@ -202,6 +202,7 @@ def round_robin_consume(fs_list, start_index):
     current_index = start_index
     while True:
         frame_object = fs_list[current_index].consume_frame()
+        print(f"[RRC] Provo ad estrarre l'indice {current_index}")
 
         if frame_object == None:
             print("Frame slot", str(fs_list[current_index].id) , "was empty")
@@ -211,7 +212,8 @@ def round_robin_consume(fs_list, start_index):
                 return None, 0
 
             continue
-
+        
+        print(f"Extracted frame {frame_object.id} from FrameSlot: {frame_object.id_slot}") # DEBUG
         return frame_object, (current_index + 1) % fs_list_len
 
 
