@@ -4,20 +4,16 @@ import tensorflow_hub as hub
 
 import grpc
 from concurrent import futures
-# import the generated classes
-import handle_new_frame_pb2
-import handle_new_frame_pb2_grpc
-import base64
 
-# For downloading the image.
-import matplotlib.pyplot as plt
+# import the generated classes
+import grpc_services_pb2
+import grpc_services_pb2_grpc
+
+import base64
 
 # For drawing onto the image.
 import numpy as np
 from PIL import Image
-from PIL import ImageColor
-from PIL import ImageDraw
-from PIL import ImageFont
 from PIL import ImageOps
 
 from frame_slot import FrameSlot
@@ -27,17 +23,20 @@ import threading
 import sys
 import psutil
 import logging
+import ipaddress
+import json
 
 '''
 This script waits for cameras to connect and insert each frame that arrives in the proper FrameSlot
 There is also another thread that consumes frames with RR extraction and another thread to track the CPU and Memory utilization
-Input: number of cameras that will connect to it, name of the log file to produce, the period of measures of utilization [s]
+Input: number of cameras that will connect to it, name of the log file to produce, the period of measures of utilization [s], IP address of the cloud
 Output: log file with all the relevant info for statistical analysis, sends inference result to cloud
 '''
 
 '''
 TODO:
-        1) Send result to cloud
+        1) creare connessione con cloud
+        2) se non riesci a mandare qualcosa al cloud scrivi un errore nel log e vai avanti (il cloud dovrebbe essere sempre raggiungibile)
 '''
 
 def track_utilization(run_event, logger, seconds):
@@ -60,6 +59,22 @@ def check_int(int_str):
     return True
 
 
+def check_ip_address(address_str):
+
+    try:
+        ip = ipaddress.ip_address(address_str)
+
+        if not isinstance(ip, ipaddress.IPv4Address) and not isinstance(ip, ipaddress.IPv6Address):
+            print("{} is not an IPv4 nor an IPv6 address".format(address_str))
+            return False
+
+    except ValueError:
+        print("{} is an invalid IP address".format(address_str))
+        return False
+
+    return True
+
+
 def logger_setup(log_file):
     # Remove all handlers associated with the root logger object.
     for handler in logging.root.handlers[:]:
@@ -69,6 +84,17 @@ def logger_setup(log_file):
     LOG_FORMAT = "%(levelname)s %(asctime)s %(message)s"
     logging.basicConfig(filename=log_file, level=logging.DEBUG, format=LOG_FORMAT, filemode="w")
     return logging.getLogger()
+
+
+def decode_result(result):
+    # to make it serializable
+    for i, v in enumerate(result['detection_class_entities']):
+        result['detection_class_entities'][i] = v.decode('utf-8')
+
+    for i, v in enumerate(result['detection_class_names']):
+        result['detection_class_names'][i] = v.decode('utf-8')
+    
+    return result
 
 
 def resize_image(raw_frame, new_width, new_height):
@@ -104,8 +130,9 @@ def run_detector(detector, img, setup = False):
         print("Inference time: ", end_time-start_time)
 
         
-        result = {key:value.numpy() for key,value in result.items()}
-        
+        result = {key:value.numpy().tolist() for key,value in result.items()}
+        result = decode_result(result)
+
         return result
 
 
@@ -132,10 +159,14 @@ def round_robin_consume(fs_list, start_index):
         return frame_object, (current_index + 1) % fs_list_len
 
 
-def consume(detector, fs_list, run_event, logger):
+def consume(detector, fs_list, run_event, logger, ip_address_cloud):
     print("Consuming...")
 
     fs_index = 0
+
+    # Set up connection with the cloud
+    channel = grpc.insecure_channel(ip_address_cloud + ':5004')
+    stub = grpc_services_pb2_grpc.ResultProcedureStub(channel)
 
     while run_event.is_set():
 
@@ -155,8 +186,20 @@ def consume(detector, fs_list, run_event, logger):
         #print("Analysed Frame with id: ", str(frame_object.id), "coming from frame slot: ", str(frame_object.id_slot))
         logger.info(f"[INFERENCE] ID: {frame_object.id} FRAMESLOT: {frame_object.id_slot} CREATION_TS: {frame_object.creation_timestamp} SERVICE_TS: {frame_object.service_timestamp} COMPLETION_TS: {frame_object.completion_timestamp}")
 
-        # TODO SEND RESULT TO CLOUD
-        
+        # Send Results to the cloud
+        result_req = grpc_services_pb2.Result(result_dict = json.dumps(result).encode('utf-8'))
+
+        # make the call
+        try:
+            stub.AggregateResult(result_req)
+        except:
+            # I cannot wait for the cloud to reconnect, just keep track of the error
+            channel.close()
+            channel = grpc.insecure_channel(ip_address_cloud + ':5004')
+            stub = grpc_services_pb2_grpc.ResultProcedureStub(channel)
+            logger.error("[ERROR] Could not send a result to the cloud")
+
+
 
 # ===================  gRPC SERVER FUNCTIONS ======================= #
 def B64_to_numpy_array(b64img_compressed, w, h):
@@ -167,7 +210,7 @@ def B64_to_numpy_array(b64img_compressed, w, h):
     return np.frombuffer(decompressed, dtype=np.uint8).reshape(h, w, -1)
 
 
-class FrameProcedureServicer(handle_new_frame_pb2_grpc.FrameProcedureServicer):
+class FrameProcedureServicer(grpc_services_pb2_grpc.FrameProcedureServicer):
 
     def __init__(self, fs_list, logger):
         self.fs_list = fs_list
@@ -193,7 +236,7 @@ class FrameProcedureServicer(handle_new_frame_pb2_grpc.FrameProcedureServicer):
         # Decode raw_frame
         raw_frame = B64_to_numpy_array(request.b64image, width, height)
 
-        response = handle_new_frame_pb2.Empty()
+        response = grpc_services_pb2.Empty()
 
         # check the slot id with size of fs_list
         if id_slot not in range(1, len(self.fs_list) + 1):
@@ -221,7 +264,7 @@ def start_server(fs_list, logger):
 
 
     # add the defined class to the server
-    handle_new_frame_pb2_grpc.add_FrameProcedureServicer_to_server(
+    grpc_services_pb2_grpc.add_FrameProcedureServicer_to_server(
             FrameProcedureServicer(fs_list, logger), server)
 
     # listen on port 5005
@@ -236,17 +279,15 @@ def start_server(fs_list, logger):
 
 def main():
 
-    # Check arguments
+    # Check arguments; we are just gonna trust the name of the log file
     n_arguments = len(sys.argv)
-    if n_arguments != 4:
-        exit("The number of argument is not correct\nPlease provide: number of cameras expected to connect, the name of the log file and the period of measures of utilization [s]")
-
-    if not check_int(sys.argv[1]) and not check_int(sys.argv[3]): # we are just gonna trust the name of the log file
-        exit()
+    if n_arguments != 5 and not check_int(sys.argv[1]) and not check_int(sys.argv[3]) and not check_ip_address(sys.argv[4]):
+        exit("The arguments are not correct\nPlease provide:\n\t1) number of cameras expected to connect\n\t2) the name of the log file\n\t3) the period of measures of utilization [s]\n\t4) the IP address of the cloud to send the results")
 
     n_cameras = int(sys.argv[1])
     log_file = sys.argv[2]
     n_seconds = int(sys.argv[3])
+    ip_address_cloud = sys.argv[4]
     print("Arguments are OK")
 
     # Check available GPU devices.
@@ -267,7 +308,7 @@ def main():
 
     # Preparing threads
     logger_thread = threading.Thread(target = track_utilization, args = (run_event, logger, n_seconds))
-    consumer_thread = threading.Thread(target = consume, args = (detector, fs_list, run_event, logger))
+    consumer_thread = threading.Thread(target = consume, args = (detector, fs_list, run_event, logger, ip_address_cloud))
 
     # Load the detector on the GPU via a call on an empty tensor
     load_model_on_GPU(detector)
@@ -290,7 +331,6 @@ def main():
         logger_thread.join()
         
         print("threads successfully closed")
-
 
 
 if __name__ == '__main__':

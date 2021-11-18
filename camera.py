@@ -1,8 +1,8 @@
 import grpc
 
 # import the generated classes
-import handle_new_frame_pb2
-import handle_new_frame_pb2_grpc
+import grpc_services_pb2
+import grpc_services_pb2_grpc
 
 # import the opencv library
 import cv2
@@ -64,7 +64,7 @@ def produce(stub, id_frame_slot, ip_consumer, channel):
 
 
             b64_frame = base64.b64encode(frame)
-            frame_req = handle_new_frame_pb2.Frame(id=id_frame, id_slot=id_frame_slot, b64image=b64_frame, width=frame.shape[1],
+            frame_req = grpc_services_pb2.Frame(id=id_frame, id_slot=id_frame_slot, b64image=b64_frame, width=frame.shape[1],
              height=frame.shape[0], creation_timestamp=time.time())
             
             # make the call
@@ -77,7 +77,7 @@ def produce(stub, id_frame_slot, ip_consumer, channel):
                     # recreate the channel
                     channel.close()
                     channel = grpc.insecure_channel(f'{ip_consumer}:5005')
-                    stub = handle_new_frame_pb2_grpc.FrameProcedureStub(channel)
+                    stub = grpc_services_pb2_grpc.FrameProcedureStub(channel)
                     continue
                 break
 
@@ -139,7 +139,7 @@ def main():
         # open a gRPC channel
         channel = grpc.insecure_channel(f'{ip_consumer}:5005')
         # create a stub (client)
-        stub = handle_new_frame_pb2_grpc.FrameProcedureStub(channel)
+        stub = grpc_services_pb2_grpc.FrameProcedureStub(channel)
         produce(stub, id_frame_slot, ip_consumer, channel)
     except KeyboardInterrupt:
         exit("\nExiting...")

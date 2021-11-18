@@ -1,0 +1,16 @@
+syntax = "proto3";
+
+
+message Result {
+    string result_dict = 1;
+}
+
+message Empty {
+
+}
+
+service ResultProcedure {
+    rpc AggregateResult(Result) returns (Empty) {}
+}
+
+

@@ -4,6 +4,7 @@ import numpy as np
 import time
 import tensorflow as tf
 import tensorflow_hub as hub
+import json
 
 
 def run_detector(detector, img, setup = False):
@@ -54,23 +55,11 @@ def main():
     load_model_on_GPU(detector)
 
     img = resize_image(np_image, 1280, 856)
-    run_detector(detector, img)
+    result = run_detector(detector, img)
 
+    result_json = json.dumps(result)
 
-
-
-
-    
-
-
-
-
-
-
-
-
-
-
+    print(result_json)
 
 
 if __name__ == '__main__':

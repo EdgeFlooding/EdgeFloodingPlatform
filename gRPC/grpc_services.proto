@@ -1,0 +1,31 @@
+syntax = "proto3";
+
+// Sent by the cameras
+message Frame {
+    int32 id = 1; 
+    int32 id_slot = 2;
+    string b64image = 3;
+    int32 width = 4;
+    int32 height = 5;
+    float creation_timestamp = 6;
+}
+
+// Sent to the cloud
+message Result {
+    string result_dict = 1;
+}
+
+// Empty response
+message Empty {
+
+}
+
+// services
+service FrameProcedure {
+    rpc HandleNewFrame(Frame) returns (Empty) {}
+}
+
+service ResultProcedure {
+    rpc AggregateResult(Result) returns (Empty) {}
+}
+

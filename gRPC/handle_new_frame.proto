@@ -10,17 +10,9 @@ message Frame {
     float creation_timestamp = 6;
 }
 
-// output prediction
-
-message Empty {
-    
-}
-
 // service
 service FrameProcedure {
     rpc HandleNewFrame(Frame) returns (Empty) {}
 }
-
-
 
 
