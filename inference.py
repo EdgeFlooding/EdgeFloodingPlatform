@@ -173,8 +173,8 @@ def consume(detector, fs_list, run_event, logger, ip_address_cloud):
         frame_object, fs_index = round_robin_consume(fs_list, fs_index)
 
         if frame_object == None:
-            print("All frame slots were empty")
-            time.sleep(1) # DEBUG
+            #print("All frame slots were empty")
+            #time.sleep(1) # DEBUG
             continue
 
         img = resize_image(frame_object.raw_frame, 1280, 856)
@@ -189,15 +189,21 @@ def consume(detector, fs_list, run_event, logger, ip_address_cloud):
         # Send Results to the cloud
         result_req = grpc_services_pb2.Result(result_dict = json.dumps(result).encode('utf-8'))
 
-        # make the call
-        try:
-            stub.AggregateResult(result_req)
-        except:
-            # I cannot wait for the cloud to reconnect, just keep track of the error
-            channel.close()
-            channel = grpc.insecure_channel(ip_address_cloud + ':5004')
-            stub = grpc_services_pb2_grpc.ResultProcedureStub(channel)
-            logger.error("[ERROR] Could not send a result to the cloud")
+        while True:
+            # make the call
+            try:
+                #print("Sending result")
+                stub.AggregateResult(result_req)
+                input("Press enter to analyse a new frame")
+            except Exception as e:
+                # I cannot wait for the cloud to reconnect, just keep track of the error
+                print(e)
+                channel.close()
+                channel = grpc.insecure_channel(ip_address_cloud + ':5004')
+                stub = grpc_services_pb2_grpc.ResultProcedureStub(channel)
+                logger.error("[ERROR] Could not send a result to the cloud")
+                continue
+            break
 
 
 
@@ -314,7 +320,6 @@ def main():
     load_model_on_GPU(detector)
 
     logger_thread.start()
-    time.sleep(.5)
     consumer_thread.start()
     server = start_server(fs_list, logger)
 

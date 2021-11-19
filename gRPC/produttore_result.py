@@ -1,8 +1,8 @@
 import grpc
 
 # import the generated classes
-import aggregate_result_pb2
-import aggregate_result_pb2_grpc
+import grpc_services_pb2
+import grpc_services_pb2_grpc
 
 # data encoding
 import json
@@ -13,14 +13,14 @@ if __name__ == '__main__':
     channel = grpc.insecure_channel('127.0.0.1:5004')
 
     # create a stub (client)
-    stub = aggregate_result_pb2_grpc.ResultProcedureStub(channel)
+    stub = grpc_services_pb2_grpc.ResultProcedureStub(channel)
 
     try:
         while True:
             result = {}
 
             print(result)
-            result_req = aggregate_result_pb2.Result(result_dict = json.dumps(result).encode('utf-8'))
+            result_req = grpc_services_pb2.Result(result_dict = json.dumps(result).encode('utf-8'))
 
             # make the call
             response = stub.AggregateResult(result_req)

@@ -4,8 +4,8 @@ import time
 
 
 # import the generated classes
-import aggregate_result_pb2
-import aggregate_result_pb2_grpc
+import grpc_services_pb2
+import grpc_services_pb2_grpc
 
 
 import numpy as np
@@ -21,10 +21,10 @@ import base64
 
 
 # based on .proto service
-class AggregateResultServicer(aggregate_result_pb2_grpc.ResultProcedureServicer):
+class AggregateResultServicer(grpc_services_pb2_grpc.ResultProcedureServicer):
 
     def AggregateResult(self, request, context):
-        response = aggregate_result_pb2.Empty()
+        response = grpc_services_pb2.Empty()
       
         print("Ho ricevuto qualcosa")
         time.sleep(5)
@@ -41,7 +41,7 @@ def start_server():
 
 
     # add the defined class to the server
-    aggregate_result_pb2_grpc.add_ResultProcedureServicer_to_server(
+    grpc_services_pb2_grpc.add_ResultProcedureServicer_to_server(
             AggregateResultServicer(), server)
 
     # listen on port 5005

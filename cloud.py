@@ -1,12 +1,23 @@
 import grpc
 from concurrent import futures
 import time
+import json
 
 
 # import the generated classes
 import grpc_services_pb2
 import grpc_services_pb2_grpc
 
+
+def encode_result(result):
+    # to make it serializable
+    for i, v in enumerate(result['detection_class_entities']):
+        result['detection_class_entities'][i] = v.encode('utf-8')
+
+    for i, v in enumerate(result['detection_class_names']):
+        result['detection_class_names'][i] = v.encode('utf-8')
+    
+    return result
 
 
 # based on .proto service
@@ -15,7 +26,8 @@ class AggregateResultServicer(grpc_services_pb2_grpc.ResultProcedureServicer):
     def AggregateResult(self, request, context):
         response = grpc_services_pb2.Empty()
       
-        print(request.result_dict)
+        result = encode_result(json.loads(request.result_dict))
+        print(result)
         print("Number of Bytes:", request.ByteSize())
         print("=======================")
 
