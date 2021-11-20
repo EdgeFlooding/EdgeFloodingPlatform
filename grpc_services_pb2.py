@@ -19,7 +19,7 @@ DESCRIPTOR = _descriptor.FileDescriptor(
   syntax='proto3',
   serialized_options=None,
   create_key=_descriptor._internal_create_key,
-  serialized_pb=b'\n\x13grpc_services.proto\"q\n\x05\x46rame\x12\n\n\x02id\x18\x01 \x01(\x05\x12\x0f\n\x07id_slot\x18\x02 \x01(\x05\x12\x10\n\x08\x62\x36\x34image\x18\x03 \x01(\t\x12\r\n\x05width\x18\x04 \x01(\x05\x12\x0e\n\x06height\x18\x05 \x01(\x05\x12\x1a\n\x12\x63reation_timestamp\x18\x06 \x01(\x02\"\x1d\n\x06Result\x12\x13\n\x0bresult_dict\x18\x01 \x01(\t\"\x07\n\x05\x45mpty24\n\x0e\x46rameProcedure\x12\"\n\x0eHandleNewFrame\x12\x06.Frame\x1a\x06.Empty\"\x00\x32\x37\n\x0fResultProcedure\x12$\n\x0f\x41ggregateResult\x12\x07.Result\x1a\x06.Empty\"\x00\x62\x06proto3'
+  serialized_pb=b'\n\x13grpc_services.proto\"q\n\x05\x46rame\x12\n\n\x02id\x18\x01 \x01(\x05\x12\x0f\n\x07id_slot\x18\x02 \x01(\x05\x12\x10\n\x08\x62\x36\x34image\x18\x03 \x01(\t\x12\r\n\x05width\x18\x04 \x01(\x05\x12\x0e\n\x06height\x18\x05 \x01(\x05\x12\x1a\n\x12\x63reation_timestamp\x18\x06 \x01(\x02\"S\n\x06Result\x12\x0f\n\x07id_node\x18\x01 \x01(\x05\x12\x10\n\x08id_frame\x18\x02 \x01(\x05\x12\x11\n\tid_camera\x18\x03 \x01(\x05\x12\x13\n\x0bresult_dict\x18\x04 \x01(\t\"\x07\n\x05\x45mpty24\n\x0e\x46rameProcedure\x12\"\n\x0eHandleNewFrame\x12\x06.Frame\x1a\x06.Empty\"\x00\x32\x37\n\x0fResultProcedure\x12$\n\x0f\x41ggregateResult\x12\x07.Result\x1a\x06.Empty\"\x00\x62\x06proto3'
 )
 
 
@@ -101,8 +101,29 @@ _RESULT = _descriptor.Descriptor(
   create_key=_descriptor._internal_create_key,
   fields=[
     _descriptor.FieldDescriptor(
-      name='result_dict', full_name='Result.result_dict', index=0,
-      number=1, type=9, cpp_type=9, label=1,
+      name='id_node', full_name='Result.id_node', index=0,
+      number=1, type=5, cpp_type=1, label=1,
+      has_default_value=False, default_value=0,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR,  create_key=_descriptor._internal_create_key),
+    _descriptor.FieldDescriptor(
+      name='id_frame', full_name='Result.id_frame', index=1,
+      number=2, type=5, cpp_type=1, label=1,
+      has_default_value=False, default_value=0,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR,  create_key=_descriptor._internal_create_key),
+    _descriptor.FieldDescriptor(
+      name='id_camera', full_name='Result.id_camera', index=2,
+      number=3, type=5, cpp_type=1, label=1,
+      has_default_value=False, default_value=0,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR,  create_key=_descriptor._internal_create_key),
+    _descriptor.FieldDescriptor(
+      name='result_dict', full_name='Result.result_dict', index=3,
+      number=4, type=9, cpp_type=9, label=1,
       has_default_value=False, default_value=b"".decode('utf-8'),
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
@@ -120,7 +141,7 @@ _RESULT = _descriptor.Descriptor(
   oneofs=[
   ],
   serialized_start=138,
-  serialized_end=167,
+  serialized_end=221,
 )
 
 
@@ -144,8 +165,8 @@ _EMPTY = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=169,
-  serialized_end=176,
+  serialized_start=223,
+  serialized_end=230,
 )
 
 DESCRIPTOR.message_types_by_name['Frame'] = _FRAME
@@ -183,8 +204,8 @@ _FRAMEPROCEDURE = _descriptor.ServiceDescriptor(
   index=0,
   serialized_options=None,
   create_key=_descriptor._internal_create_key,
-  serialized_start=178,
-  serialized_end=230,
+  serialized_start=232,
+  serialized_end=284,
   methods=[
   _descriptor.MethodDescriptor(
     name='HandleNewFrame',
@@ -209,8 +230,8 @@ _RESULTPROCEDURE = _descriptor.ServiceDescriptor(
   index=1,
   serialized_options=None,
   create_key=_descriptor._internal_create_key,
-  serialized_start=232,
-  serialized_end=287,
+  serialized_start=286,
+  serialized_end=341,
   methods=[
   _descriptor.MethodDescriptor(
     name='AggregateResult',

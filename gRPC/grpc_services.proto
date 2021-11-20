@@ -12,7 +12,10 @@ message Frame {
 
 // Sent to the cloud
 message Result {
-    string result_dict = 1;
+    int32 id_node = 1;
+    int32 id_frame = 2;
+    int32 id_camera = 3;
+    string result_dict = 4;
 }
 
 // Empty response
@@ -29,3 +32,4 @@ service ResultProcedure {
     rpc AggregateResult(Result) returns (Empty) {}
 }
 
+// per compilare: python -m grpc_tools.protoc -I. --python_out=. --grpc_python_out=. ./grpc_services.proto

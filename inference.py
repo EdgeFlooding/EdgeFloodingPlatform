@@ -43,8 +43,7 @@ def track_utilization(run_event, logger, seconds):
     '''Used by the logger_thread to write utilization data on log file'''
     while run_event.is_set():
         #print("Starting track utilization")
-        logger.info(f"[UTILIZATION] CPU percentage: {psutil.cpu_percent(interval=seconds)}")
-        logger.info(f"[UTILIZATION] Memory percentage: {psutil.virtual_memory().percent}")
+        logger.info(f"[UTILIZATION] CPU percentage: {psutil.cpu_percent(interval=seconds)}, Memory percentage: {psutil.virtual_memory().percent}")
 
 
 def check_int(int_str):
@@ -159,7 +158,7 @@ def round_robin_consume(fs_list, start_index):
         return frame_object, (current_index + 1) % fs_list_len
 
 
-def consume(detector, fs_list, run_event, logger, ip_address_cloud):
+def consume(id_this_node, detector, fs_list, run_event, logger, ip_address_cloud):
     print("Consuming...")
 
     fs_index = 0
@@ -187,17 +186,17 @@ def consume(detector, fs_list, run_event, logger, ip_address_cloud):
         logger.info(f"[INFERENCE] ID: {frame_object.id} FRAMESLOT: {frame_object.id_slot} CREATION_TS: {frame_object.creation_timestamp} SERVICE_TS: {frame_object.service_timestamp} COMPLETION_TS: {frame_object.completion_timestamp}")
 
         # Send Results to the cloud
-        result_req = grpc_services_pb2.Result(result_dict = json.dumps(result).encode('utf-8'))
+        result_req = grpc_services_pb2.Result(id_node = id_this_node, id_frame = frame_object.id, id_camera = frame_object.id_slot, result_dict = json.dumps(result).encode('utf-8'))
 
         while True:
             # make the call
             try:
                 #print("Sending result")
                 stub.AggregateResult(result_req)
-                input("Press enter to analyse a new frame")
+                #input("Press enter to analyse a new frame")
             except Exception as e:
                 # I cannot wait for the cloud to reconnect, just keep track of the error
-                print(e)
+                print("Error while sending result...")
                 channel.close()
                 channel = grpc.insecure_channel(ip_address_cloud + ':5004')
                 stub = grpc_services_pb2_grpc.ResultProcedureStub(channel)
@@ -287,13 +286,14 @@ def main():
 
     # Check arguments; we are just gonna trust the name of the log file
     n_arguments = len(sys.argv)
-    if n_arguments != 5 and not check_int(sys.argv[1]) and not check_int(sys.argv[3]) and not check_ip_address(sys.argv[4]):
-        exit("The arguments are not correct\nPlease provide:\n\t1) number of cameras expected to connect\n\t2) the name of the log file\n\t3) the period of measures of utilization [s]\n\t4) the IP address of the cloud to send the results")
+    if n_arguments != 6 and not check_int(sys.argv[1]) and not check_int(sys.argv[2]) and not check_int(sys.argv[3]) and not check_ip_address(sys.argv[5]):
+        exit("The arguments are not correct\nPlease provide:\n\t1) the id of this node\n\t2) the number of cameras expected to connect\n\t3) the period of measures of utilization [s]\n\t4) the name of the log file\n\t5) the IP address of the cloud to send the results")
 
-    n_cameras = int(sys.argv[1])
-    log_file = sys.argv[2]
+    id_this_node = int(sys.argv[1])
+    n_cameras = int(sys.argv[2])
     n_seconds = int(sys.argv[3])
-    ip_address_cloud = sys.argv[4]
+    log_file = sys.argv[4]
+    ip_address_cloud = sys.argv[5]
     print("Arguments are OK")
 
     # Check available GPU devices.
@@ -314,7 +314,7 @@ def main():
 
     # Preparing threads
     logger_thread = threading.Thread(target = track_utilization, args = (run_event, logger, n_seconds))
-    consumer_thread = threading.Thread(target = consume, args = (detector, fs_list, run_event, logger, ip_address_cloud))
+    consumer_thread = threading.Thread(target = consume, args = (id_this_node, detector, fs_list, run_event, logger, ip_address_cloud))
 
     # Load the detector on the GPU via a call on an empty tensor
     load_model_on_GPU(detector)
