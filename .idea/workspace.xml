@@ -5,7 +5,7 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="6207b9ab-2021-4403-8114-ea9281007c8d" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/base_inference/simple_inference.py" beforeDir="false" afterPath="$PROJECT_DIR$/base_inference/simple_inference.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test.log" beforeDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />

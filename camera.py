@@ -134,6 +134,9 @@ def main():
     id_frame_slot = int(sys.argv[1])
     ip_consumer = sys.argv[2]
 
+    if isinstance(ip_consumer, ipaddress.IPv6Address): # IPv6 address must be within []
+        ip_consumer = "[" + ip_consumer + "]"
+
     print("All good, extracting frames...")
     try:
         # open a gRPC channel

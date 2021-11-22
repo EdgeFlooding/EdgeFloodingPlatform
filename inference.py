@@ -294,6 +294,10 @@ def main():
     n_seconds = int(sys.argv[3])
     log_file = sys.argv[4]
     ip_address_cloud = sys.argv[5]
+
+    if isinstance(ip_address_cloud, ipaddress.IPv6Address): # IPv6 address must be within []
+        ip_consumer = "[" + ip_address_cloud + "]"
+
     print("Arguments are OK")
 
     # Check available GPU devices.
