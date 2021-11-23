@@ -10,6 +10,9 @@ import logging
 import grpc_services_pb2
 import grpc_services_pb2_grpc
 
+def current_time_int():
+    return int(round(time.time() * 1000_000_000))
+
 
 def logger_setup(log_file):
     # Remove all handlers associated with the root logger object.
@@ -41,18 +44,24 @@ class AggregateResultServicer(grpc_services_pb2_grpc.ResultProcedureServicer):
 
 
     def AggregateResult(self, request, context):
+        start_ts = current_time_int()
         response = grpc_services_pb2.Empty()
       
         id_node = request.id_node
         id_frame = request.id_frame
         id_camera = request.id_camera
-        result = encode_result(json.loads(request.result_dict))
+        result = json.loads(request.result_dict)
         num_bytes = request.ByteSize()
         #print(result)
         print("I received something...")
         self.logger.info(f"[RECEIVE] Node: {id_node}, Frame: {id_frame}, Camera: {id_camera}, Bytes: {num_bytes}")
         print("=======================")
 
+        dict_to_save = {'detection_class_entities': result['detection_class_entities'], 'detection_scores': result['detection_scores']}
+        self.logger.info(f"[AGGREGATION]: {dict_to_save}")
+
+        end_ts = current_time_int()
+        self.logger.info(f"[AGG_LATENCY] Time: {end_ts-start_ts}")
         return response
 
 

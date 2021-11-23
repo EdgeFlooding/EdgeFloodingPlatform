@@ -1,7 +1,11 @@
-
 from frame import Frame
 from threading import Lock
 import time
+
+
+def current_time_int():
+    return int(round(time.time() * 1000_000_000))
+
 
 def synchronized(lock):
     """ Synchronization decorator. """
@@ -69,8 +73,8 @@ class FrameSlot():
         # I need to return a new Frame obj to avoid working on the same reference
         return_obj = Frame()
         return_obj.copy_attributes(self.frame_object)
-        # Remember to set the service time stamp
-        return_obj.service_timestamp = time.time()
+        # Remember to set the service timestamp
+        return_obj.service_timestamp = current_time_int()
 
         return return_obj
 

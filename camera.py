@@ -19,6 +19,9 @@ Frames must be produced at the same frame rate of the mp4 video
 and extracted cyclically
 '''
 
+def current_time_int():
+    return int(round(time.time() * 1000_000_000))
+
 
 def produce(stub, id_frame_slot, ip_consumer, channel):
     video_path = 'videos/Rec_20200125_170152_211_S.mp4'
@@ -65,7 +68,7 @@ def produce(stub, id_frame_slot, ip_consumer, channel):
 
             b64_frame = base64.b64encode(frame)
             frame_req = grpc_services_pb2.Frame(id=id_frame, id_slot=id_frame_slot, b64image=b64_frame, width=frame.shape[1],
-             height=frame.shape[0], creation_timestamp=time.time())
+             height=frame.shape[0], creation_timestamp= current_time_int())
             
             # make the call
             while True:

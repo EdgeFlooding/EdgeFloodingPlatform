@@ -7,7 +7,7 @@ message Frame {
     string b64image = 3;
     int32 width = 4;
     int32 height = 5;
-    float creation_timestamp = 6;
+    int64 creation_timestamp = 6;
 }
 
 // Sent to the cloud

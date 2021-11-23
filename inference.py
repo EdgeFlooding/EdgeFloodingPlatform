@@ -33,11 +33,9 @@ Input: number of cameras that will connect to it, name of the log file to produc
 Output: log file with all the relevant info for statistical analysis, sends inference result to cloud
 '''
 
-'''
-TODO:
-        1) creare connessione con cloud
-        2) se non riesci a mandare qualcosa al cloud scrivi un errore nel log e vai avanti (il cloud dovrebbe essere sempre raggiungibile)
-'''
+def current_time_int():
+    return int(round(time.time() * 1000_000_000))
+
 
 def track_utilization(run_event, logger, seconds):
     '''Used by the logger_thread to write utilization data on log file'''
@@ -179,8 +177,8 @@ def consume(id_this_node, detector, fs_list, run_event, logger, ip_address_cloud
         img = resize_image(frame_object.raw_frame, 1280, 856)
         result = run_detector(detector, img)
 
-        # Attention: the frames analysed are not saved anywhere!
-        frame_object.completion_timestamp = time.time()
+        # Keep track of completion timestamp
+        frame_object.completion_timestamp = current_time_int()
 
         #print("Analysed Frame with id: ", str(frame_object.id), "coming from frame slot: ", str(frame_object.id_slot))
         logger.info(f"[INFERENCE] ID: {frame_object.id} FRAMESLOT: {frame_object.id_slot} CREATION_TS: {frame_object.creation_timestamp} SERVICE_TS: {frame_object.service_timestamp} COMPLETION_TS: {frame_object.completion_timestamp}")
@@ -188,21 +186,18 @@ def consume(id_this_node, detector, fs_list, run_event, logger, ip_address_cloud
         # Send Results to the cloud
         result_req = grpc_services_pb2.Result(id_node = id_this_node, id_frame = frame_object.id, id_camera = frame_object.id_slot, result_dict = json.dumps(result).encode('utf-8'))
 
-        while True:
-            # make the call
-            try:
-                #print("Sending result")
-                stub.AggregateResult(result_req)
-                #input("Press enter to analyse a new frame")
-            except Exception as e:
-                # I cannot wait for the cloud to reconnect, just keep track of the error
-                print("Error while sending result...")
-                channel.close()
-                channel = grpc.insecure_channel(ip_address_cloud + ':5004')
-                stub = grpc_services_pb2_grpc.ResultProcedureStub(channel)
-                logger.error("[ERROR] Could not send a result to the cloud")
-                continue
-            break
+        # make the call
+        try:
+            stub.AggregateResult(result_req)
+        except Exception as e:
+            # I cannot wait for the cloud to reconnect, just keep track of the error
+            print("Error while sending result...")
+            channel.close()
+            channel = grpc.insecure_channel(ip_address_cloud + ':5004')
+            stub = grpc_services_pb2_grpc.ResultProcedureStub(channel)
+            logger.error("[ERROR] Could not send a result to the cloud")
+            continue
+        
 
 
 
