@@ -1,0 +1,60 @@
+{
+    "data": [
+        {
+            "created_at": "2021-11-23T17:00:20.000Z",
+            "id": "1463190693116059649",
+            "text": "Current Temp at Hamilton Str. Prkng Lot D on 11/23/2021, 12:00 is: 41.77. It feels like 34.74. Raining Probability 0.0. Rain Intensity : 0.0 The day is Clear #EllicottCity,#Flood,#Flashflood,#Floodbot,#AIConverse #UMBC Prototype/NSF GR#1640625 https: //t.co/ZM1RVSgPlc"
+        },
+        {
+            "created_at": "2021-11-22T23:00:20.000Z",
+            "id": "1462918899746357252",
+            "text": "Current Temp at Hamilton Str. Prkng Lot D on 11/22/2021, 18:00 is: 41.75. It feels like 35.09. Raining Probability 0.0. Rain Intensity : 0.0 The day is Mostly Cloudy #EllicottCity,#Flood,#Flashflood,#Floodbot,#AIConverse #UMBC Prototype/NSF GR#1640625 https: //t.co/28AUv7Vmap"
+        },
+        {
+            "created_at": "2021-11-22T17:00:19.000Z",
+            "id": "1462828302121504768",
+            "text": "Current Temp at Hamilton Str. Prkng Lot D on 11/22/2021, 12:00 is: 51.01. It feels like 51.01. Raining Probability 0.14. Rain Intensity : 0.0019 The day is Overcast #EllicottCity,#Flood,#Flashflood,#Floodbot,#AIConverse #UMBC Prototype/NSF GR#1640625 https://t.co/dX1jmhWEpT"
+        },
+        {
+            "created_at": "2021-11-22T11:00:19.000Z",
+            "id": "1462737705243226117",
+            "text": "Current Temp at Hamilton Str. Prkng Lot D on 11/22/2021, 06:00 is: 46.07. It feels like 42.53. Raining Probability 1.0. Rain Intensity : 0.0072 The day is Drizzle #EllicottCity,#Flood,#Flashflood,#Floodbot,#AIConverse #UMBC Prototype/NSF GR#1640625 https: //t.co/LOP7H3KkvL"
+        },
+        {
+            "created_at": "2021-11-21T17:00:20.000Z",
+            "id": "1462465917665923078",
+            "text": "Current Temp at Hamilton Str. Prkng Lot D on 11/21/2021, 12:00 is: 51.43. It feels like 51.43. Raining Probability 0.0. Rain Intensity : 0.0 The day is Partly Cloudy #EllicottCity,#Flood,#Flashflood,#Floodbot,#AIConverse #UMBC Prototype/NSF GR#1640625 https: //t.co/hbfZSI2Ojv"
+        },
+        {
+            "created_at": "2021-11-21T11:00:20.000Z",
+            "id": "1462375320707911683",
+            "text": "Current Temp at Hamilton Str. Prkng Lot D on 11/21/2021, 06:00 is: 33.1. It feels like 30.24. Raining Probability 0.0. Rain Intensity : 0.0 The day is Mostly Cloudy #EllicottCity,#Flood,#Flashflood,#Floodbot,#AIConverse #UMBC Prototype/NSF GR#1640625 https://t.co/IIJw99PZae"
+        },
+        {
+            "created_at": "2021-11-20T23:00:20.000Z",
+            "id": "1462194123755171840",
+            "text": "Current Temp at Hamilton Str. Prkng Lot D on 11/20/2021, 18:00 is: 42.15. It feels like 38.18. Raining Probability 0.0. Rain Intensity : 0.0 The day is Overcast #EllicottCity,#Flood,#Flashflood,#Floodbot,#AIConverse #UMBC Prototype/NSF GR#1640625 https: //t.co/0u0OMOmfM8"
+        },
+        {
+            "created_at": "2021-11-19T17:00:20.000Z",
+            "id": "1461741139468374019",
+            "text": "Current Temp at Hamilton Str. Prkng Lot D on 11/19/2021, 12:00 is: 45.18. It feels like 38.41. Raining Probability 0.0. Rain Intensity : 0.0 The day is Clear #EllicottCity,#Flood,#Flashflood,#Floodbot,#AIConverse #UMBC Prototype/NSF GR#1640625 https: //t.co/gbY7YoATyg"
+        },
+        {
+            "created_at": "2021-11-19T11:00:19.000Z",
+            "id": "1461650540459438082",
+            "text": "Current Temp at Hamilton Str. Prkng Lot D on 11/19/2021, 06:00 is: 37.83. It feels like 30.58. Raining Probability 0.0. Rain Intensity : 0.0 The day is Clear #EllicottCity,#Flood,#Flashflood,#Floodbot,#AIConverse #UMBC Prototype/NSF GR#1640625 https: //t.co/7bInOtBkND"
+        },
+        {
+            "created_at": "2021-11-18T17:00:19.000Z",
+            "id": "1461378750751383558",
+            "text": "Current Temp at Hamilton Str. Prkng Lot D on 11/18/2021, 12:00 is: 67.91. It feels like 67.91. Raining Probability 0.0. Rain Intensity : 0.0 The day is Clear #EllicottCity,#Flood,#Flashflood,#Floodbot,#AIConverse #UMBC Prototype/NSF GR#1640625 https: //t.co/KfUw3Eyxg4"
+        }
+    ],
+    "meta": {
+        "newest_id": "1463190693116059649",
+        "next_token": "7140dibdnow9c7btw3z3an84ri0vfi31iclpdpv3498vs",
+        "oldest_id": "1461378750751383558",
+        "result_count": 10
+    }
+}
