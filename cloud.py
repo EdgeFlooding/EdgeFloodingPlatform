@@ -29,7 +29,7 @@ def logger_setup(log_file):
 
 
 def encode_result(result):
-    # to make it serializable
+    '''Convert the result dictionary to the original format'''
     for i, v in enumerate(result['detection_class_entities']):
         result['detection_class_entities'][i] = v.encode('utf-8')
 
@@ -51,6 +51,7 @@ def bearer_oauth(r):
 
 
 def connect_to_endpoint(url, params):
+    '''Performs the GET request to the twitter endpoint'''
     response = requests.request("GET", url, auth=bearer_oauth, params=params)
     print(response.status_code)
     if response.status_code != 200:
@@ -62,33 +63,40 @@ def connect_to_endpoint(url, params):
     return response.json()
 
 
-def update_tweets(run_event, lock, n_seconds):
+def update_tweets(run_event, lock, last_tweets, n_seconds, logger):
+    '''Periodically queries twitter to get the last tweets of UMBC Flood Bot and update the last_tweets'''
     # UMBC Flood Bot id
     bot_id = 1173295284874596358
     url = "https://api.twitter.com/2/users/{}/tweets".format(bot_id)
 
     params = {"tweet.fields": "created_at"}
 
-    while run_event.is_set():
+    while not run_event.is_set():
+        try:
+            json_response = connect_to_endpoint(url, params)
+        except Exception:
+            print("Cannot retrieve json")
+            logger.info("[TWITTER_ERROR] Cannot retrieve json")
+            run_event.wait(n_seconds)
+            continue
 
-        json_response = connect_to_endpoint(url, params)
-        print(json.dumps(json_response, indent=4, sort_keys=True))
+        # Mutual exclusion with server threads
+        lock.acquire()
+        # check if last_tweets must be updated or not
+        if last_tweets is None or last_tweets['meta']['newest_id'] != json_response['meta']['newest_id']:
+            last_tweets = json_response
+        lock.release()
 
-        # check if the json_response is changed or not
-
-        # update it if necessary remember lock.acquire()!!!
-
-        time.sleep(n_seconds)
-
-
-    
+        run_event.wait(n_seconds)
 
 
 # based on .proto service
 class AggregateResultServicer(grpc_services_pb2_grpc.ResultProcedureServicer):
 
-    def __init__(self, logger):
+    def __init__(self, logger, lock, last_tweets):
         self.logger = logger
+        self.lock = lock
+        self.last_tweets = last_tweets
 
 
     def AggregateResult(self, request, context):
@@ -100,12 +108,38 @@ class AggregateResultServicer(grpc_services_pb2_grpc.ResultProcedureServicer):
         id_camera = request.id_camera
         result = json.loads(request.result_dict)
         num_bytes = request.ByteSize()
-        #print(result)
+
         print("I received something...")
         self.logger.info(f"[RECEIVE] Node: {id_node}, Frame: {id_frame}, Camera: {id_camera}, Bytes: {num_bytes}")
         print("=======================")
 
+        # I only save a subset of the dictionary received
         dict_to_save = {'detection_class_entities': result['detection_class_entities'], 'detection_scores': result['detection_scores']}
+
+        # Strings to search to find the actual float value of rain intensity
+        rain_intensity = "Rain Intensity : "
+        the_day = "The day is"
+        # If rain intensity is above this value it is a strong signal for possible flooding
+        threshold = 0.5
+
+        self.lock.acquire()
+        
+        # The twitter_thread hasn't updated this value yet
+        if self.last_tweets is None:
+            dict_to_save['Flooding'] = False
+
+        else:
+            text = response['data'][0]['text'] # I only look at the last tweet
+            rain_index = text.find(rain_intensity)
+            end_index = text.find(the_day)
+            if rain_index == -1 or end_index == -1: # Just in case the text has a different format
+                dict_to_save['Flooding'] = False
+            else:
+                rain_intensity_float = float(text[rain_index + len(rain_intensity):end_index])
+                dict_to_save['Flooding'] = rain_intensity_float > threshold 
+
+        self.lock.release()
+
         self.logger.info(f"[AGGREGATION]: {dict_to_save}")
 
         end_ts = current_time_int()
@@ -113,14 +147,14 @@ class AggregateResultServicer(grpc_services_pb2_grpc.ResultProcedureServicer):
         return response
 
 
-def start_server(logger):
+def start_server(logger, lock, last_tweets):
     # create a gRPC server
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=12))
 
 
     # add the defined class to the server
     grpc_services_pb2_grpc.add_ResultProcedureServicer_to_server(
-            AggregateResultServicer(logger), server)
+            AggregateResultServicer(logger, lock, last_tweets), server)
 
     # listen on port 5005
     print('Starting server. Listening on port 5004.')
@@ -135,25 +169,25 @@ def main():
         exit("Exiting...\nPlease provide the name of the log file")
 
     log_name = sys.argv[1]
-    logger = logger_setup(log_name)
-    server = start_server(logger)
-
-    run_event = threading.Event()
-    run_event.set()
 
     # Hard coded because we have a limit on the number of request we can issue to the twitter endpoint
     n_seconds = 60 
-
+    last_tweets = None
     lock = threading.Lock()
-    twitter_thread = threading.Thread(target = update_tweets, args = (run_event, lock, n_seconds))
-    twitter_thread.start()
 
+    logger = logger_setup(log_name)
+    server = start_server(logger, lock, last_tweets)
+
+    run_event = threading.Event()
+    twitter_thread = threading.Thread(target = update_tweets, args = (run_event, lock, last_tweets, n_seconds, logger))
+    twitter_thread.start()
 
     try:
         while True:
             time.sleep(5)
     except KeyboardInterrupt:
         server.stop(0)
+        run_event.set()
         twitter_thread.join()
 
 

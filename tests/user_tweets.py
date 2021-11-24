@@ -49,8 +49,23 @@ def connect_to_endpoint(url, params):
 def main():
     url = create_url()
     params = get_params()
-    json_response = connect_to_endpoint(url, params)
-    print(json.dumps(json_response, indent=4, sort_keys=True))
+    try:
+        json_response = connect_to_endpoint(url, params)
+        json_response2 = connect_to_endpoint(url, params)
+    except Exception:
+        exit("Impossible to retrieve json")
+
+    n_id = json_response['meta']['newest_id']
+    n_id2 = json_response2['meta']['newest_id']
+
+    print(n_id)
+    print(n_id2)
+    
+    if n_id == n_id2:
+        print("Uguali")
+    
+
+    #print(json.dumps(json_response, indent=4, sort_keys=True))
 
 
 if __name__ == "__main__":
