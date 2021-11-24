@@ -39,9 +39,9 @@ def current_time_int():
 
 def track_utilization(run_event, logger, seconds):
     '''Used by the logger_thread to write utilization data on log file'''
-    while run_event.is_set():
-        #print("Starting track utilization")
-        logger.info(f"[UTILIZATION] CPU percentage: {psutil.cpu_percent(interval=seconds)}, Memory percentage: {psutil.virtual_memory().percent}")
+    while not run_event.is_set():
+        logger.info(f"[UTILIZATION] CPU percentage: {psutil.cpu_percent()}, Memory percentage: {psutil.virtual_memory().percent}")
+        run_event.wait(seconds)
 
 
 def check_int(int_str):
@@ -165,13 +165,13 @@ def consume(id_this_node, detector, fs_list, run_event, logger, ip_address_cloud
     channel = grpc.insecure_channel(ip_address_cloud + ':5004')
     stub = grpc_services_pb2_grpc.ResultProcedureStub(channel)
 
-    while run_event.is_set():
+    while not run_event.is_set():
 
         frame_object, fs_index = round_robin_consume(fs_list, fs_index)
 
         if frame_object == None:
             #print("All frame slots were empty")
-            #time.sleep(1) # DEBUG
+            #run_event.wait(1) # DEBUG
             continue
 
         img = resize_image(frame_object.raw_frame, 1280, 856)
@@ -198,7 +198,6 @@ def consume(id_this_node, detector, fs_list, run_event, logger, ip_address_cloud
             logger.error("[ERROR] Could not send a result to the cloud")
             continue
         
-
 
 
 # ===================  gRPC SERVER FUNCTIONS ======================= #
@@ -291,7 +290,7 @@ def main():
     ip_address_cloud = sys.argv[5]
 
     if isinstance(ip_address_cloud, ipaddress.IPv6Address): # IPv6 address must be within []
-        ip_consumer = "[" + ip_address_cloud + "]"
+        ip_address_cloud = "[" + ip_address_cloud + "]"
 
     print("Arguments are OK")
 
@@ -309,7 +308,6 @@ def main():
 
     # Event to terminate threads with ctrl + C
     run_event = threading.Event()
-    run_event.set()
 
     # Preparing threads
     logger_thread = threading.Thread(target = track_utilization, args = (run_event, logger, n_seconds))
@@ -328,7 +326,7 @@ def main():
     except KeyboardInterrupt:
         print("\nattempting to close threads")
         server.stop(0)
-        run_event.clear()
+        run_event.set()
 
         # Waiting for threads to close
         consumer_thread.join()

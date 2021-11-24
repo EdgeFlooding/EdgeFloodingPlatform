@@ -53,7 +53,7 @@ def bearer_oauth(r):
 def connect_to_endpoint(url, params):
     '''Performs the GET request to the twitter endpoint'''
     response = requests.request("GET", url, auth=bearer_oauth, params=params)
-    print(response.status_code)
+    #print(response.status_code)
     if response.status_code != 200:
         raise Exception(
             "Request returned an error: {} {}".format(
@@ -140,7 +140,7 @@ class AggregateResultServicer(grpc_services_pb2_grpc.ResultProcedureServicer):
 
         self.lock.release()
 
-        self.logger.info(f"[AGGREGATION]: {dict_to_save}")
+        self.logger.info(f"[AGGREGATION]: {json.dumps(dict_to_save, indent=2)}")
 
         end_ts = current_time_int()
         self.logger.info(f"[AGG_LATENCY] Time: {end_ts-start_ts}")

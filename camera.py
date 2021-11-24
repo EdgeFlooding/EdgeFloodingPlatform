@@ -39,7 +39,7 @@ def produce(stub, id_frame_slot, ip_consumer, channel):
 
 
     print("Producing...", str(id_frame_slot)) # DEBUG
-    print("Waiting for server...")
+    print("Waiting for server...", end='', flush=True)
     id_frame = 1
 
     while cap.isOpened():
@@ -68,15 +68,15 @@ def produce(stub, id_frame_slot, ip_consumer, channel):
 
             b64_frame = base64.b64encode(frame)
             frame_req = grpc_services_pb2.Frame(id=id_frame, id_slot=id_frame_slot, b64image=b64_frame, width=frame.shape[1],
-             height=frame.shape[0], creation_timestamp= current_time_int())
+             height=frame.shape[0], creation_timestamp=current_time_int())
             
             # make the call
             while True:
                 try:
                     stub.HandleNewFrame(frame_req)
                 except:
-                    print(".")
-                    time.sleep(5)
+                    print(".", end='', flush=True)
+                    time.sleep(3)
                     # recreate the channel
                     channel.close()
                     channel = grpc.insecure_channel(f'{ip_consumer}:5005')
