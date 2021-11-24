@@ -24,7 +24,7 @@ def logger_setup(log_file):
 
     # logger configuration
     LOG_FORMAT = "%(levelname)s %(asctime)s %(message)s"
-    logging.basicConfig(filename=log_file, level=logging.DEBUG, format=LOG_FORMAT, filemode="w")
+    logging.basicConfig(filename=log_file, level=logging.INFO, format=LOG_FORMAT, filemode="w")
     return logging.getLogger()
 
 
@@ -76,7 +76,7 @@ def update_tweets(run_event, lock, last_tweets, n_seconds, logger):
             json_response = connect_to_endpoint(url, params)
         except Exception:
             print("Cannot retrieve json")
-            logger.info("[TWITTER_ERROR] Cannot retrieve json")
+            logger.info("[TWITTER_ERROR]")
             run_event.wait(n_seconds)
             continue
 
@@ -171,7 +171,7 @@ def main():
     log_name = sys.argv[1]
 
     # Hard coded because we have a limit on the number of request we can issue to the twitter endpoint
-    n_seconds = 60 
+    n_seconds = 60
     last_tweets = None
     lock = threading.Lock()
 
