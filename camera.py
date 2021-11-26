@@ -106,22 +106,6 @@ def check_int(int_str):
     return True
 
 
-def check_ip_address(address_str):
-
-    try:
-        ip = ipaddress.ip_address(address_str)
-
-        if not isinstance(ip, ipaddress.IPv4Address) and not isinstance(ip, ipaddress.IPv6Address):
-            print("{} is not an IPv4 nor an IPv6 address".format(address_str))
-            return False
-
-    except ValueError:
-        print("{} is an invalid IP address".format(address_str))
-        return False
-
-    return True
-
-
 def main():
 
     # Check number of arguments
@@ -130,15 +114,12 @@ def main():
         exit("The number of argument is not correct\nPlease provide: ID frame slot and IP consumer node")
 
     # Check type of arguments
-    if not check_int(sys.argv[1]) or not check_ip_address(sys.argv[2]):
+    if not check_int(sys.argv[1]):
         # Error prints are already in the check functions
         exit()
 
     id_frame_slot = int(sys.argv[1])
     ip_consumer = sys.argv[2]
-
-    if isinstance(ip_consumer, ipaddress.IPv6Address): # IPv6 address must be within []
-        ip_consumer = "[" + ip_consumer + "]"
 
     print("All good, extracting frames...")
     try:

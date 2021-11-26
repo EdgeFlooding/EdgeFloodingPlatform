@@ -56,22 +56,6 @@ def check_int(int_str):
     return True
 
 
-def check_ip_address(address_str):
-
-    try:
-        ip = ipaddress.ip_address(address_str)
-
-        if not isinstance(ip, ipaddress.IPv4Address) and not isinstance(ip, ipaddress.IPv6Address):
-            print("{} is not an IPv4 nor an IPv6 address".format(address_str))
-            return False
-
-    except ValueError:
-        print("{} is an invalid IP address".format(address_str))
-        return False
-
-    return True
-
-
 def logger_setup(log_file):
     # Remove all handlers associated with the root logger object.
     for handler in logging.root.handlers[:]:
@@ -280,7 +264,7 @@ def main():
 
     # Check arguments; we are just gonna trust the name of the log file
     n_arguments = len(sys.argv)
-    if n_arguments != 6 and not check_int(sys.argv[1]) and not check_int(sys.argv[2]) and not check_int(sys.argv[3]) and not check_ip_address(sys.argv[5]):
+    if n_arguments != 6 or not check_int(sys.argv[1]) or not check_int(sys.argv[2]) or not check_int(sys.argv[3]):
         exit("The arguments are not correct\nPlease provide:\n\t1) the id of this node\n\t2) the number of cameras expected to connect\n\t3) the period of measures of utilization [s]\n\t4) the name of the log file\n\t5) the IP address of the cloud to send the results")
 
     id_this_node = int(sys.argv[1])
@@ -288,9 +272,6 @@ def main():
     n_seconds = int(sys.argv[3])
     log_file = sys.argv[4]
     ip_address_cloud = sys.argv[5]
-
-    if isinstance(ip_address_cloud, ipaddress.IPv6Address): # IPv6 address must be within []
-        ip_address_cloud = "[" + ip_address_cloud + "]"
 
     print("Arguments are OK")
 
