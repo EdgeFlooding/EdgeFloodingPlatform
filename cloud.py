@@ -110,7 +110,7 @@ class AggregateResultServicer(grpc_services_pb2_grpc.ResultProcedureServicer):
         num_bytes = request.ByteSize()
 
         print("I received something...")
-        self.logger.info(f"[RECEIVE] Node: {id_node}, Frame: {id_frame}, Camera: {id_camera}, Bytes: {num_bytes}")
+        self.logger.info(f'[RECEIVE] {{"Edge_Node": {id_node}, "Frame": {id_frame}, "Camera": {id_camera}, "Bytes": {num_bytes}}}')
         print("=======================")
 
         # I only save a subset of the dictionary received
@@ -140,10 +140,10 @@ class AggregateResultServicer(grpc_services_pb2_grpc.ResultProcedureServicer):
 
         self.lock.release()
 
-        self.logger.info(f"[AGGREGATION]: {json.dumps(dict_to_save, indent=2)}")
+        self.logger.info(f"[AGGREGATION]: {json.dumps(dict_to_save)}")
 
         end_ts = current_time_int()
-        self.logger.info(f"[AGG_LATENCY] Time: {end_ts-start_ts}")
+        self.logger.info(f'[AGG_LATENCY] {{"Time": {end_ts-start_ts}}}')
         return response
 
 
