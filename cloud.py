@@ -158,7 +158,7 @@ def start_server(logger, lock, last_tweets):
 
     # listen on port 5005
     print('Starting server. Listening on port 5004.')
-    server.add_insecure_port('[::]:5004')
+    server.add_insecure_port('[::]:5000')
     server.start()
     return server
 

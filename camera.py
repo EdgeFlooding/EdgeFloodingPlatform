@@ -23,7 +23,7 @@ def current_time_int():
     return int(round(time.time() * 1000_000_000))
 
 
-def produce(stub, id_frame_slot, ip_consumer, channel):
+def produce(stub, id_frame_slot, ip_consumer, channel, port):
     video_path = 'videos/Rec_20200125_170152_211_S.mp4'
 
     # Define a video capture object
@@ -79,7 +79,7 @@ def produce(stub, id_frame_slot, ip_consumer, channel):
                     time.sleep(3)
                     # recreate the channel
                     channel.close()
-                    channel = grpc.insecure_channel(f'{ip_consumer}:5005')
+                    channel = grpc.insecure_channel(f'{ip_consumer}:{port}')
                     stub = grpc_services_pb2_grpc.FrameProcedureStub(channel)
                     continue
                 break
@@ -120,14 +120,15 @@ def main():
 
     id_frame_slot = int(sys.argv[1])
     ip_consumer = sys.argv[2]
+    port = 5000 + id_frame_slot
 
     print("All good, extracting frames...")
     try:
         # open a gRPC channel
-        channel = grpc.insecure_channel(f'{ip_consumer}:5005')
+        channel = grpc.insecure_channel(f'{ip_consumer}:{port}')
         # create a stub (client)
         stub = grpc_services_pb2_grpc.FrameProcedureStub(channel)
-        produce(stub, id_frame_slot, ip_consumer, channel)
+        produce(stub, id_frame_slot, ip_consumer, channel, port)
     except KeyboardInterrupt:
         exit("\nExiting...")
     except Exception as e:

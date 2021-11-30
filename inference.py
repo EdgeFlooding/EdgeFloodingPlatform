@@ -146,7 +146,7 @@ def consume(id_this_node, detector, fs_list, run_event, logger, ip_address_cloud
     fs_index = 0
 
     # Set up connection with the cloud
-    channel = grpc.insecure_channel(ip_address_cloud + ':5004')
+    channel = grpc.insecure_channel(ip_address_cloud + ':5000')
     stub = grpc_services_pb2_grpc.ResultProcedureStub(channel)
 
     while not run_event.is_set():
@@ -177,7 +177,7 @@ def consume(id_this_node, detector, fs_list, run_event, logger, ip_address_cloud
             # I cannot wait for the cloud to reconnect, just keep track of the error
             print("Error while sending result...")
             channel.close()
-            channel = grpc.insecure_channel(ip_address_cloud + ':5004')
+            channel = grpc.insecure_channel(ip_address_cloud + ':5000')
             stub = grpc_services_pb2_grpc.ResultProcedureStub(channel)
             logger.error("[ERROR] Could not send a result to the cloud")
             continue
@@ -251,8 +251,10 @@ def start_server(fs_list, logger):
             FrameProcedureServicer(fs_list, logger), server)
 
     # listen on port 5005
-    print('Starting server. Listening on port 5005.')
-    server.add_insecure_port('[::]:5005')
+    print('Starting server. Listening on port all ports from 5001 to 5010s.')
+    for i in range(1, 11):
+        server.add_insecure_port('[::]:' + str(5000 + i))
+    
     server.start()
 
     return server
