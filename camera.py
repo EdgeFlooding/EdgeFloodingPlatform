@@ -8,7 +8,6 @@ import grpc_services_pb2_grpc
 import cv2
 import time
 import sys
-import ipaddress
 import base64
 
 '''
