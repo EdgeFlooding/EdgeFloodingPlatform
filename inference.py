@@ -241,7 +241,7 @@ class FrameProcedureServicer(grpc_services_pb2_grpc.FrameProcedureServicer):
         return response
 
 
-def start_server(fs_list, logger):
+def start_server(fs_list, logger, n_cameras):
     # create a gRPC server
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=12))
 
@@ -252,7 +252,7 @@ def start_server(fs_list, logger):
 
     # listen on port 5005
     print('Starting server. Listening on port all ports from 5001 to 5010s.')
-    for i in range(1, 11):
+    for i in range(1, n_cameras + 1):
         server.add_insecure_port('[::]:' + str(5000 + i))
     
     server.start()
@@ -301,7 +301,7 @@ def main():
 
     logger_thread.start()
     consumer_thread.start()
-    server = start_server(fs_list, logger)
+    server = start_server(fs_list, logger, n_cameras)
 
     try:
         while 1:
