@@ -171,7 +171,7 @@ def main():
     log_name = sys.argv[1]
 
     # Hard coded because we have a limit on the number of request we can issue to the twitter endpoint
-    n_seconds = 60
+    n_seconds = 300
     last_tweets = None
     lock = threading.Lock()
 
