@@ -243,7 +243,7 @@ class FrameProcedureServicer(grpc_services_pb2_grpc.FrameProcedureServicer):
 
 def start_server(fs_list, logger, n_cameras):
     # create a gRPC server
-    server = grpc.server(futures.ThreadPoolExecutor(max_workers=12))
+    server = grpc.server(futures.ThreadPoolExecutor(max_workers=100))
 
 
     # add the defined class to the server
