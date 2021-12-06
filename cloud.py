@@ -161,7 +161,7 @@ class AggregateResultServicer(grpc_services_pb2_grpc.ResultProcedureServicer):
             dict_to_save['Flooding'] = False
 
         else:
-            text = response['data'][0]['text'] # I only look at the last tweet
+            text = last_tweets['data'][0]['text'] # I only look at the last tweet
             rain_index = text.find(rain_intensity)
             end_index = text.find(the_day)
             if rain_index == -1 or end_index == -1: # Just in case the text has a different format
@@ -201,7 +201,7 @@ def main():
     log_name = sys.argv[1]
 
     # Hard coded because we have a limit on the number of request we can issue to the twitter endpoint
-    n_seconds = 20
+    n_seconds = 90
     tweets_obj = Tweets()
 
     logger = logger_setup(log_name)
