@@ -114,11 +114,13 @@ def update_tweets(run_event, tweets_obj, n_seconds, logger):
             continue
 
         last_tweets, _ = tweets_obj.get_last_tweets()
+        time_for_request = end_ts - start_ts
         # Mutual exclusion with server threads
         # check if last_tweets must be updated or not
         if last_tweets is None or last_tweets['meta']['newest_id'] != json_response['meta']['newest_id']:
-            time_for_request = end_ts - start_ts
             tweets_obj.update_last_tweets(json_response, time_for_request)
+        else:
+            tweets_obj.update_last_tweets(last_tweets, time_for_request)
         
         run_event.wait(n_seconds)
 
