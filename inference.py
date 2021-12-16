@@ -223,7 +223,7 @@ class FrameProcedureServicer(grpc_services_pb2_grpc.FrameProcedureServicer):
 
         # check the slot id with size of fs_list
         if id_slot not in range(1, len(self.fs_list) + 1):
-            print(f"[ERROR] id_slot: {id_slot} does not exist!")
+            self.logger.error(f"[ERROR] id_slot: {id_slot} does not exist!")
             return response
 
         # create Frame to update the Frame Slot
