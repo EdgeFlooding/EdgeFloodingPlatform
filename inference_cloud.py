@@ -23,13 +23,12 @@ import threading
 import sys
 import psutil
 import logging
-import ipaddress
 import json
 
 '''
 This script waits for cameras to connect and insert each frame that arrives in the proper FrameSlot
 There is also another thread that consumes frames with RR extraction and another thread to track the CPU and Memory utilization
-Input: number of cameras that will connect to it, name of the log file to produce, the period of measures of utilization [s], IP address of the cloud
+Input: id of the edge that will execute this script, number of cameras that will connect to it, name of the log file to produce, the period of measures of utilization [s], IP address of the cloud
 Output: log file with all the relevant info for statistical analysis, sends inference result to cloud
 '''
 
