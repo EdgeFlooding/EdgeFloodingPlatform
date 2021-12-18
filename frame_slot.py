@@ -45,10 +45,16 @@ class FrameSlot():
     @synchronized(lock)
     def update_frame(self, frame : Frame):
         
+        # Check for id mismatch
         if frame.id_slot != self.id:
             print(f"[ERROR] The Frame with id_slot: {frame.id_slot} cannot be insertid in FrameSlot: {self.id}")
             return
         
+        # Discard old frame if this slot already holds a newer frame
+        if self.empty == False and self.frame_object.creation_timestamp > frame.creation_timestamp:
+            print(f"[ERROR] The Frame is older than the one currently stored")
+            return
+
         self.empty = False
 
         # Updating the frame_object
