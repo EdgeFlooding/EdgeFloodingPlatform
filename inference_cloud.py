@@ -170,39 +170,39 @@ def consume(id_gpu, id_this_node, detector, fs_list, run_event, logger, ip_addre
     channel = grpc.insecure_channel(ip_address_cloud + ':5000')
     stub = grpc_services_pb2_grpc.ResultProcedureStub(channel)
 
-    while not run_event.is_set():
+    with tf.device('/device:GPU:' + str(id_gpu)):
+        while not run_event.is_set():
 
-        frame_object, fs_index = round_robin_consume(fs_list, fs_index)
+            frame_object, fs_index = round_robin_consume(fs_list, fs_index)
 
-        if frame_object == None:
-            #print("All frame slots were empty")
-            #run_event.wait(1) # DEBUG
-            continue
+            if frame_object == None:
+                #print("All frame slots were empty")
+                #run_event.wait(1) # DEBUG
+                continue
 
-        img = resize_image(frame_object.raw_frame, 1280, 856)
-        with tf.device('/device:GPU:' + str(id_gpu)):
+            img = resize_image(frame_object.raw_frame, 1280, 856)
             result = run_detector(detector, img)
 
-        # Keep track of completion timestamp
-        frame_object.completion_timestamp = current_time_int()
+            # Keep track of completion timestamp
+            frame_object.completion_timestamp = current_time_int()
 
-        #print("Analysed Frame with id: ", str(frame_object.id), "coming from frame slot: ", str(frame_object.id_slot))
-        logger.info(f'[INFERENCE] {{"ID": {frame_object.id}, "FRAMESLOT": {frame_object.id_slot}, "CREATION_TS": {frame_object.creation_timestamp}, "SERVICE_TS": {frame_object.service_timestamp}, "COMPLETION_TS": {frame_object.completion_timestamp}}}')
+            #print("Analysed Frame with id: ", str(frame_object.id), "coming from frame slot: ", str(frame_object.id_slot))
+            logger.info(f'[INFERENCE] {{"ID": {frame_object.id}, "FRAMESLOT": {frame_object.id_slot}, "CREATION_TS": {frame_object.creation_timestamp}, "SERVICE_TS": {frame_object.service_timestamp}, "COMPLETION_TS": {frame_object.completion_timestamp}}}')
 
-        # Send Results to the cloud
-        result_req = grpc_services_pb2.Result(id_node = id_this_node, id_frame = frame_object.id, id_camera = frame_object.id_slot, result_dict = json.dumps(result).encode('utf-8'))
+            # Send Results to the cloud
+            result_req = grpc_services_pb2.Result(id_node = id_this_node, id_frame = frame_object.id, id_camera = frame_object.id_slot, result_dict = json.dumps(result).encode('utf-8'))
 
-        # make the call
-        try:
-            stub.AggregateResult(result_req)
-        except Exception as e:
-            # I cannot wait for the cloud to reconnect, just keep track of the error
-            print("Error while sending result...")
-            channel.close()
-            channel = grpc.insecure_channel(ip_address_cloud + ':5000')
-            stub = grpc_services_pb2_grpc.ResultProcedureStub(channel)
-            logger.error("[ERROR] Could not send a result to the cloud")
-            continue
+            # make the call
+            try:
+                stub.AggregateResult(result_req)
+            except Exception as e:
+                # I cannot wait for the cloud to reconnect, just keep track of the error
+                print("Error while sending result...")
+                channel.close()
+                channel = grpc.insecure_channel(ip_address_cloud + ':5000')
+                stub = grpc_services_pb2_grpc.ResultProcedureStub(channel)
+                logger.error("[ERROR] Could not send a result to the cloud")
+                continue
         
 
 
