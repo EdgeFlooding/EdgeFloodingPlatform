@@ -187,7 +187,7 @@ def consume(id_gpu, id_this_node, detector, fs_list, run_event, logger, ip_addre
             frame_object.completion_timestamp = current_time_int()
 
             #print("Analysed Frame with id: ", str(frame_object.id), "coming from frame slot: ", str(frame_object.id_slot))
-            logger.info(f'[INFERENCE] {{"ID": {frame_object.id}, "FRAMESLOT": {frame_object.id_slot}, "CREATION_TS": {frame_object.creation_timestamp}, "SERVICE_TS": {frame_object.service_timestamp}, "COMPLETION_TS": {frame_object.completion_timestamp}}}')
+            logger.info(f'[INFERENCE] {{"ID": {frame_object.id}, "FRAMESLOT": {frame_object.id_slot}, "CREATION_TS": {frame_object.creation_timestamp}, "SERVICE_TS": {frame_object.service_timestamp}, "COMPLETION_TS": {frame_object.completion_timestamp}, "ID_GPU": {id_gpu}}}')
 
             # Send Results to the cloud
             result_req = grpc_services_pb2.Result(id_node = id_this_node, id_frame = frame_object.id, id_camera = frame_object.id_slot, result_dict = json.dumps(result).encode('utf-8'))
