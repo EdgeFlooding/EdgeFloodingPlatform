@@ -324,10 +324,11 @@ def main():
     
 
     logger_thread.start()
+    server = start_server(fs_list, logger, n_cameras)
 
     for consumer_thread in consumer_threads:
         consumer_thread.start()
-    server = start_server(fs_list, logger, n_cameras)
+        time.sleep(0.1)
 
     try:
         while 1:
