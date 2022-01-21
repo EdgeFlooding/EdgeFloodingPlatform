@@ -265,7 +265,7 @@ def main():
 
     # Check arguments; we are just gonna trust the name of the log file
     n_arguments = len(sys.argv)
-    if n_arguments != 6 or not check_int(sys.argv[1]) or not check_int(sys.argv[2]) or not check_int(sys.argv[3]):
+    if n_arguments != 7 or not check_int(sys.argv[1]) or not check_int(sys.argv[2]) or not check_int(sys.argv[3]) or not check_int(sys.argv[6]):
         exit("The arguments are not correct\nPlease provide:\n\t1) the id of this node\n\t2) the number of cameras expected to connect\n\t3) the period of measures of utilization [s]\n\t4) the name of the log file\n\t5) the IP address of the cloud to send the results")
 
     id_this_node = int(sys.argv[1])
@@ -273,6 +273,7 @@ def main():
     n_seconds = int(sys.argv[3])
     log_file = sys.argv[4]
     ip_address_cloud = sys.argv[5]
+    buffer_length = int(sys.argv[6])
 
     print("Arguments are OK")
 
@@ -284,7 +285,7 @@ def main():
     detector = hub.load(module_handle).signatures['default']
 
     # Prepare the frameslot list
-    fs_list = [FrameSlot(id) for id in range(1,n_cameras + 1)]
+    fs_list = [FrameSlot(id, buffer_length) for id in range(1,n_cameras + 1)]
 
     logger = logger_setup(log_file)
 

@@ -22,12 +22,4 @@ class Frame():
         self.service_timestamp = None
         self.completion_timestamp = None
 
-    def copy_attributes(self, frame_obj):
-
-        self.id = frame_obj.id
-        self.id_slot = frame_obj.id_slot
-        self.raw_frame = frame_obj.raw_frame
-        self.creation_timestamp = frame_obj.creation_timestamp
-        self.service_timestamp = frame_obj.service_timestamp
-        self.completion_timestamp = frame_obj.completion_timestamp
 

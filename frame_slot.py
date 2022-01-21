@@ -1,7 +1,7 @@
 from frame import Frame
 from threading import Lock
 import time
-
+from collections import deque
 
 def current_time_int():
     return int(round(time.time() * 1000_000_000))
@@ -27,18 +27,17 @@ It also keeps track of the number of frames produced.
 '''
 class FrameSlot():
 
-    # does it store a new frame?
-    empty = True
     lock = Lock()
-    frame_object = Frame()
+    frame_buffer = None
     # counters to track frames produced and consumed
     frames_produced = 0
     frames_consumed = 0
 
 
-    def __init__(self, id):
+    def __init__(self, id, length_buffer):
         # id to identify which camera is producing to this slot
         self.id = id
+        self.frame_buffer = deque(maxlen=length_buffer)
 
 
     # called by the producer
@@ -49,16 +48,9 @@ class FrameSlot():
         if frame.id_slot != self.id:
             print(f"[ERROR] The Frame with id_slot: {frame.id_slot} cannot be insertid in FrameSlot: {self.id}")
             return
-        
-        # Discard old frame if this slot already holds a newer frame
-        if self.empty == False and self.frame_object.creation_timestamp > frame.creation_timestamp:
-            print(f"[ERROR] The Frame is older than the one currently stored")
-            return
 
-        self.empty = False
-
-        # Updating the frame_object
-        self.frame_object = frame
+        # Updating the frame_buffer
+        self.frame_buffer.appendleft(frame)
 
         self.frames_produced = self.frames_produced + 1
         #print("Frame prodotti: ", self.frames_produced)
@@ -67,18 +59,15 @@ class FrameSlot():
     # called by the consumer
     @synchronized(lock)
     def consume_frame(self):
-        if self.empty == True:
+        if len(self.frame_buffer) == 0:
             # skip this slot
             return None
-
-        self.empty = True
 
         self.frames_consumed = self.frames_consumed + 1
         #print("Frame consumati: ", self.frames_consumed)
 
-        # I need to return a new Frame obj to avoid working on the same reference
-        return_obj = Frame()
-        return_obj.copy_attributes(self.frame_object)
+        # pop the frame from the head of the fifo queue
+        return_obj = self.frame_buffer.pop()
         # Remember to set the service timestamp
         return_obj.service_timestamp = current_time_int()
 
