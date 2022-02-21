@@ -1,6 +1,7 @@
 # For running inference on the TF-Hub module.
 import tensorflow as tf
 import tensorflow_hub as hub
+import torch
 
 import grpc
 from concurrent import futures
@@ -31,6 +32,7 @@ There is also another thread that consumes frames with RR extraction and another
 Input: id of the edge that will execute this script, number of cameras that will connect to it, name of the log file to produce, the period of measures of utilization [s], IP address of the cloud
 Output: log file with all the relevant info for statistical analysis, sends inference result to cloud
 '''
+
 
 def current_time_int():
     return int(round(time.time() * 1000_000_000))
@@ -77,29 +79,32 @@ def decode_result(result):
     return result
 
 
-def resize_image(raw_frame, new_width, new_height):
+def resize_image(raw_frame, new_width, new_height, yolo_run):
     '''Transform frame into tensor for detector'''
     pil_image = Image.fromarray(np.uint8(raw_frame))
     pil_image = ImageOps.fit(pil_image, (new_width, new_height), Image.ANTIALIAS)
     pil_image_rgb = pil_image.convert("RGB")
 
-    img = tf.convert_to_tensor(pil_image_rgb, dtype=tf.uint8)
-    converted_img  = tf.image.convert_image_dtype(img, tf.float32)[tf.newaxis, ...]
+    if yolo_run == False:
+        img = tf.convert_to_tensor(pil_image_rgb, dtype=tf.uint8)
+        converted_img  = tf.image.convert_image_dtype(img, tf.float32)[tf.newaxis, ...]
+    else:
+        converted_img = pil_image_rgb
 
     return converted_img
 
 
-def load_model_on_GPU(id_gpu, detector):
+def load_model_on_GPU(id_gpu, detector, yolo_run):
     '''To be called before actually using the detector on real frames'''
 
     img = np.zeros([856, 1280], np.uint8)
-    img = resize_image(img, 1280, 856)
+    img = resize_image(img, 1280, 856, yolo_run)
     with tf.device('/device:GPU:' + str(id_gpu)):
-        run_detector(detector, img, setup = True)
+        run_detector(detector, img, yolo_run, setup = True)
     print("The model in gpu", id_gpu, "is ready")
 
 
-def run_detector(detector, img, setup = False):
+def run_detector(detector, img, yolo_run, setup = False):
     '''if setup == True -> we are in the empty call, so no print required'''
 
     start_time = time.time()
@@ -107,21 +112,27 @@ def run_detector(detector, img, setup = False):
     end_time = time.time()
 
     if setup is False:
-        print("Found %d objects." % len(result["detection_scores"]))
-        print("Inference time: ", end_time-start_time)
-
         
-        result = {key:value.numpy().tolist() for key,value in result.items()}
-        result = decode_result(result)
+        if yolo_run is True:
+            print(str(len(result.pandas().xyxy[0]['name'])) + " objects were found") # yolo results
+            print("Inference time: ", end_time-start_time)
+
+            result = result.pandas().xyxy[0].to_dict()
+
+        else: # inception and mobile results
+            print("Found %d objects." % len(result["detection_scores"]))
+            print("Inference time: ", end_time-start_time)
+
+            
+            result = {key:value.numpy().tolist() for key,value in result.items()}
+            result = decode_result(result)
 
         return result
 
 
-def load_detectors():
+def load_detectors(module_handle):
     '''Loads a detector on all the GPUs available'''
 
-    #module_handle = "https://tfhub.dev/google/openimages_v4/ssd/mobilenet_v2/1"
-    module_handle = "https://tfhub.dev/google/faster_rcnn/openimages_v4/inception_resnet_v2/1"
     detectors = []
     gpus = tf.config.list_physical_devices('GPU')
     if gpus:
@@ -132,7 +143,10 @@ def load_detectors():
             components = physical_string.split(':')
             try:
                 with tf.device('/device:GPU:' + components[2]):
-                    detector = hub.load(module_handle).signatures['default']
+                    if module_handle == 'yolo':
+                        detector = torch.hub.load('ultralytics/yolov5', 'yolov5s', pretrained=True)
+                    else:
+                        detector = hub.load(module_handle).signatures['default']
                     detectors.append(detector)
             except RuntimeError as e:
                 print(e)
@@ -162,7 +176,7 @@ def round_robin_consume(fs_list, start_index):
         return frame_object, (current_index + 1) % fs_list_len
 
 
-def consume(id_gpu, id_this_node, detector, fs_list, run_event, logger, ip_address_cloud):
+def consume(id_gpu, id_this_node, detector, fs_list, run_event, logger, ip_address_cloud, yolo_run):
     print("Consuming...")
 
     fs_index = 0
@@ -181,8 +195,8 @@ def consume(id_gpu, id_this_node, detector, fs_list, run_event, logger, ip_addre
                 #run_event.wait(1) # DEBUG
                 continue
 
-            img = resize_image(frame_object.raw_frame, 1280, 856)
-            result = run_detector(detector, img)
+            img = resize_image(frame_object.raw_frame, 1280, 856, yolo_run)
+            result = run_detector(detector, img, yolo_run)
 
             # Keep track of completion timestamp
             frame_object.completion_timestamp = current_time_int()
@@ -289,8 +303,8 @@ def main():
 
     # Check arguments; we are just gonna trust the name of the log file
     n_arguments = len(sys.argv)
-    if n_arguments != 7 or not check_int(sys.argv[1]) or not check_int(sys.argv[2]) or not check_int(sys.argv[3]) or not check_int(sys.argv[6]):
-        exit("The arguments are not correct\nPlease provide:\n\t1) the id of this node\n\t2) the number of cameras expected to connect\n\t3) the period of measures of utilization [s]\n\t4) the name of the log file\n\t5) the IP address of the cloud to send the results")
+    if n_arguments != 8 or not check_int(sys.argv[1]) or not check_int(sys.argv[2]) or not check_int(sys.argv[3]) or not check_int(sys.argv[6]):
+        exit("The arguments are not correct\nPlease provide:\n\t1) the id of this node\n\t2) the number of cameras expected to connect\n\t3) the period of measures of utilization [s]\n\t4) the name of the log file\n\t5) the IP address of the cloud to send the results\n\t6) buffer length\n\t7) module to be used")
 
     id_this_node = int(sys.argv[1])
     n_cameras = int(sys.argv[2])
@@ -298,14 +312,30 @@ def main():
     log_file = sys.argv[4]
     ip_address_cloud = sys.argv[5]
     buffer_length = int(sys.argv[6])
+    module = sys.argv[7]
 
     print("Arguments are OK")
 
     # Check available GPU devices.
     print("The following GPU devices are available: %s" % tf.test.gpu_device_name())
 
+    yolo_run = False # keep false for inception and mobile, true for yolo
+
+    # Get the detector
+    if module == 'mobile':
+        module_handle = "https://tfhub.dev/google/openimages_v4/ssd/mobilenet_v2/1"
+    else:
+        if module == 'inception':
+            module_handle = "https://tfhub.dev/google/faster_rcnn/openimages_v4/inception_resnet_v2/1"
+        else:
+            if module == 'yolo':
+                module_handle = module
+                yolo_run = True
+            else:
+                exit("The module provided is not correct")
+
     # Get the detectors
-    detectors, n_gpus = load_detectors()
+    detectors, n_gpus = load_detectors(module_handle)
 
     # Prepare the frameslot list
     fs_list = [FrameSlot(id, buffer_length) for id in range(1,n_cameras + 1)]
@@ -320,9 +350,9 @@ def main():
     consumer_threads = []
 
     for i in range(n_gpus):
-        consumer_threads.append(threading.Thread(target = consume, args = (i, id_this_node, detectors[i], fs_list, run_event, logger, ip_address_cloud)))
+        consumer_threads.append(threading.Thread(target = consume, args = (i, id_this_node, detectors[i], fs_list, run_event, logger, ip_address_cloud, yolo_run)))
         # Load the detector on the GPU via a call on an empty tensor
-        load_model_on_GPU(i, detectors[i])
+        load_model_on_GPU(i, detectors[i], yolo_run)
     
 
     logger_thread.start()
