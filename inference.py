@@ -1,6 +1,7 @@
 # For running inference on the TF-Hub module.
 import tensorflow as tf
 import tensorflow_hub as hub
+import torch
 
 import grpc
 from concurrent import futures
@@ -83,6 +84,7 @@ def resize_image(raw_frame, new_width, new_height):
     pil_image = ImageOps.fit(pil_image, (new_width, new_height), Image.ANTIALIAS)
     pil_image_rgb = pil_image.convert("RGB")
 
+    # ==================== NON VA FATTO NEL CASO YOLO ========================
     img = tf.convert_to_tensor(pil_image_rgb, dtype=tf.uint8)
     converted_img  = tf.image.convert_image_dtype(img, tf.float32)[tf.newaxis, ...]
 
@@ -106,12 +108,19 @@ def run_detector(detector, img, setup = False):
     end_time = time.time()
 
     if setup is False:
-        print("Found %d objects." % len(result["detection_scores"]))
-        print("Inference time: ", end_time-start_time)
 
-        
-        result = {key:value.numpy().tolist() for key,value in result.items()}
-        result = decode_result(result)
+        if "detection_scores" in result.keys(): # inception and mobile results
+            print("Found %d objects." % len(result["detection_scores"]))
+            print("Inference time: ", end_time-start_time)
+
+            
+            result = {key:value.numpy().tolist() for key,value in result.items()}
+            result = decode_result(result)
+        else:
+            print(str(len(result.pandas().xyxy[0]['name'])) + " objects were found") # yolo results
+            print("Inference time: ", end_time-start_time)
+
+            result = result.pandas().xyxy[0].to_dict()
 
         return result
 
@@ -265,7 +274,7 @@ def main():
 
     # Check arguments; we are just gonna trust the name of the log file
     n_arguments = len(sys.argv)
-    if n_arguments != 7 or not check_int(sys.argv[1]) or not check_int(sys.argv[2]) or not check_int(sys.argv[3]) or not check_int(sys.argv[6]):
+    if n_arguments != 8 or not check_int(sys.argv[1]) or not check_int(sys.argv[2]) or not check_int(sys.argv[3]) or not check_int(sys.argv[6]):
         exit("The arguments are not correct\nPlease provide:\n\t1) the id of this node\n\t2) the number of cameras expected to connect\n\t3) the period of measures of utilization [s]\n\t4) the name of the log file\n\t5) the IP address of the cloud to send the results")
 
     id_this_node = int(sys.argv[1])
@@ -274,6 +283,7 @@ def main():
     log_file = sys.argv[4]
     ip_address_cloud = sys.argv[5]
     buffer_length = int(sys.argv[6])
+    module = sys.argv[7]
 
     print("Arguments are OK")
 
@@ -281,9 +291,19 @@ def main():
     print("The following GPU devices are available: %s" % tf.test.gpu_device_name())
 
     # Get the detector
-    #module_handle = "https://tfhub.dev/google/openimages_v4/ssd/mobilenet_v2/1"
-    module_handle = "https://tfhub.dev/google/faster_rcnn/openimages_v4/inception_resnet_v2/1"
-    detector = hub.load(module_handle).signatures['default']
+    if module == 'mobile':
+        module_handle = "https://tfhub.dev/google/openimages_v4/ssd/mobilenet_v2/1"
+        detector = hub.load(module_handle).signatures['default']
+    else:
+        if module == 'inception':
+            module_handle = "https://tfhub.dev/google/faster_rcnn/openimages_v4/inception_resnet_v2/1"
+            detector = hub.load(module_handle).signatures['default']
+        else:
+            if module == 'yolo':
+                detector = torch.hub.load('ultralytics/yolov5', 'yolov5s', pretrained=True)
+            else:
+                exit("The module provided is not correct")
+    
 
     # Prepare the frameslot list
     fs_list = [FrameSlot(id, buffer_length) for id in range(1,n_cameras + 1)]

@@ -104,10 +104,7 @@ def resize_image(raw_frame, new_width, new_height):
     '''Transform frame into tensor for detector'''
     pil_image = Image.fromarray(np.uint8(raw_frame))
     pil_image = ImageOps.fit(pil_image, (new_width, new_height), Image.ANTIALIAS)
-    pil_image_rgb = pil_image.convert("RGB")
-
-    img = tf.convert_to_tensor(pil_image_rgb, dtype=tf.uint8)
-    converted_img  = tf.image.convert_image_dtype(img, tf.float32)[tf.newaxis, ...]
+    converted_img = pil_image.convert("RGB")
 
     return converted_img
 
@@ -129,7 +126,7 @@ def run_detector(detector, img, setup = False):
     end_time = time.time()
 
     if setup is False:
-        print(result.print())
+        print(str(len(result.pandas().xyxy[0]['name'])) + " objects were found")
         print("Inference time: ", end_time-start_time)
 
         result = result.pandas().xyxy[0].to_dict()
