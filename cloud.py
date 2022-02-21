@@ -148,7 +148,10 @@ class AggregateResultServicer(grpc_services_pb2_grpc.ResultProcedureServicer):
         print("=======================")
 
         # I only save a subset of the dictionary received
-        dict_to_save = {'detection_class_entities': result['detection_class_entities'], 'detection_scores': result['detection_scores']}
+        if 'detection_class_entities' in result.keys(): # inception or mobilenet results
+            dict_to_save = {'detection_class_entities': result['detection_class_entities'], 'detection_scores': result['detection_scores']}
+        else: # yolov5 results
+            dict_to_save = result 
 
         # Strings to search to find the actual float value of rain intensity
         rain_intensity = "Rain Intensity : "

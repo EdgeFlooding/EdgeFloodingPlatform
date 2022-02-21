@@ -132,10 +132,8 @@ def run_detector(detector, img, setup = False):
         print(result.print())
         print("Inference time: ", end_time-start_time)
 
-        # ======================================= CONTINUE FROM HERE =======================================
-        result = {key:value.numpy().tolist() for key,value in result.items()}
-        result = decode_result(result)
-
+        result = result.pandas().xyxy[0].to_dict()
+        
         return result
 
 
