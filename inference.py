@@ -78,24 +78,27 @@ def decode_result(result):
     return result
 
 
-def resize_image(raw_frame, new_width, new_height):
+def resize_image(raw_frame, new_width, new_height, use_tensor):
     '''Transform frame into tensor for detector'''
     pil_image = Image.fromarray(np.uint8(raw_frame))
     pil_image = ImageOps.fit(pil_image, (new_width, new_height), Image.ANTIALIAS)
     pil_image_rgb = pil_image.convert("RGB")
 
-    # ==================== NON VA FATTO NEL CASO YOLO ========================
-    img = tf.convert_to_tensor(pil_image_rgb, dtype=tf.uint8)
-    converted_img  = tf.image.convert_image_dtype(img, tf.float32)[tf.newaxis, ...]
+    if use_tensor == True:
+        img = tf.convert_to_tensor(pil_image_rgb, dtype=tf.uint8)
+        converted_img  = tf.image.convert_image_dtype(img, tf.float32)[tf.newaxis, ...]
+    else:
+        # don't convert to tensor in yolo experiments
+        converted_img = pil_image_rgb
 
     return converted_img
 
 
-def load_model_on_GPU(detector):
+def load_model_on_GPU(detector, use_tensor):
     '''To be called before actually using the detector on real frames'''
 
     img = np.zeros([856, 1280], np.uint8)
-    img = resize_image(img, 1280, 856)
+    img = resize_image(img, 1280, 856, use_tensor)
     run_detector(detector, img, setup = True)
     print("The model is ready")
 
@@ -148,7 +151,7 @@ def round_robin_consume(fs_list, start_index):
         return frame_object, (current_index + 1) % fs_list_len
 
 
-def consume(id_this_node, detector, fs_list, run_event, logger, ip_address_cloud):
+def consume(id_this_node, detector, fs_list, run_event, logger, ip_address_cloud, use_tensor):
     print("Consuming...")
 
     fs_index = 0
@@ -166,7 +169,7 @@ def consume(id_this_node, detector, fs_list, run_event, logger, ip_address_cloud
             #run_event.wait(1) # DEBUG
             continue
 
-        img = resize_image(frame_object.raw_frame, 1280, 856)
+        img = resize_image(frame_object.raw_frame, 1280, 856, use_tensor)
         result = run_detector(detector, img)
 
         # Keep track of completion timestamp
@@ -275,7 +278,7 @@ def main():
     # Check arguments; we are just gonna trust the name of the log file
     n_arguments = len(sys.argv)
     if n_arguments != 8 or not check_int(sys.argv[1]) or not check_int(sys.argv[2]) or not check_int(sys.argv[3]) or not check_int(sys.argv[6]):
-        exit("The arguments are not correct\nPlease provide:\n\t1) the id of this node\n\t2) the number of cameras expected to connect\n\t3) the period of measures of utilization [s]\n\t4) the name of the log file\n\t5) the IP address of the cloud to send the results")
+        exit("The arguments are not correct\nPlease provide:\n\t1) the id of this node\n\t2) the number of cameras expected to connect\n\t3) the period of measures of utilization [s]\n\t4) the name of the log file\n\t5) the IP address of the cloud to send the results\n\t6) buffer length\n\t7) module to be used")
 
     id_this_node = int(sys.argv[1])
     n_cameras = int(sys.argv[2])
@@ -290,6 +293,8 @@ def main():
     # Check available GPU devices.
     print("The following GPU devices are available: %s" % tf.test.gpu_device_name())
 
+    use_tensor = True # keep true for inception and mobile, false for yolo
+
     # Get the detector
     if module == 'mobile':
         module_handle = "https://tfhub.dev/google/openimages_v4/ssd/mobilenet_v2/1"
@@ -301,6 +306,7 @@ def main():
         else:
             if module == 'yolo':
                 detector = torch.hub.load('ultralytics/yolov5', 'yolov5s', pretrained=True)
+                use_tensor = False
             else:
                 exit("The module provided is not correct")
     
@@ -315,10 +321,10 @@ def main():
 
     # Preparing threads
     logger_thread = threading.Thread(target = track_utilization, args = (run_event, logger, n_seconds))
-    consumer_thread = threading.Thread(target = consume, args = (id_this_node, detector, fs_list, run_event, logger, ip_address_cloud))
+    consumer_thread = threading.Thread(target = consume, args = (id_this_node, detector, fs_list, run_event, logger, ip_address_cloud, use_tensor))
 
     # Load the detector on the GPU via a call on an empty tensor
-    load_model_on_GPU(detector)
+    load_model_on_GPU(detector, use_tensor)
 
     logger_thread.start()
     consumer_thread.start()
