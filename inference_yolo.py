@@ -1,8 +1,4 @@
-# For running inference on the TF-Hub module.
 import torch
-import tensorflow as tf
-import tensorflow_hub as hub
-
 
 import grpc
 from concurrent import futures
@@ -79,32 +75,25 @@ def decode_result(result):
     return result
 
 
-def resize_image(raw_frame, new_width, new_height, yolo_run):
+def resize_image(raw_frame, new_width, new_height):
     '''Transform frame into tensor for detector'''
     pil_image = Image.fromarray(np.uint8(raw_frame))
     pil_image = ImageOps.fit(pil_image, (new_width, new_height), Image.ANTIALIAS)
-    pil_image_rgb = pil_image.convert("RGB")
-
-    if yolo_run == False:
-        img = tf.convert_to_tensor(pil_image_rgb, dtype=tf.uint8)
-        converted_img  = tf.image.convert_image_dtype(img, tf.float32)[tf.newaxis, ...]
-    else:
-        # don't convert to tensor in yolo experiments
-        converted_img = pil_image_rgb
+    converted_img = pil_image.convert("RGB")
 
     return converted_img
 
 
-def load_model_on_GPU(detector, yolo_run):
+def load_model_on_GPU(detector):
     '''To be called before actually using the detector on real frames'''
 
     img = np.zeros([856, 1280], np.uint8)
-    img = resize_image(img, 1280, 856, yolo_run)
-    run_detector(detector, img, yolo_run, setup = True)
+    img = resize_image(img, 1280, 856)
+    run_detector(detector, img, setup = True)
     print("The model is ready")
 
 
-def run_detector(detector, img, yolo_run, setup = False):
+def run_detector(detector, img, setup = False):
     '''if setup == True -> we are in the empty call, so no print required'''
 
     start_time = time.time()
@@ -113,19 +102,10 @@ def run_detector(detector, img, yolo_run, setup = False):
 
     if setup is False:
 
-        if yolo_run is True:
-            print(str(len(result.pandas().xyxy[0]['name'])) + " objects were found") # yolo results
-            print("Inference time: ", end_time-start_time)
+        print(str(len(result.pandas().xyxy[0]['name'])) + " objects were found") # yolo results
+        print("Inference time: ", end_time-start_time)
 
-            result = result.pandas().xyxy[0].to_dict()
-
-        else: # inception and mobile results
-            print("Found %d objects." % len(result["detection_scores"]))
-            print("Inference time: ", end_time-start_time)
-
-            
-            result = {key:value.numpy().tolist() for key,value in result.items()}
-            result = decode_result(result)
+        result = result.pandas().xyxy[0].to_dict()
         
         return result
 
@@ -153,7 +133,7 @@ def round_robin_consume(fs_list, start_index):
         return frame_object, (current_index + 1) % fs_list_len
 
 
-def consume(id_this_node, detector, fs_list, run_event, logger, ip_address_cloud, yolo_run):
+def consume(id_this_node, detector, fs_list, run_event, logger, ip_address_cloud):
     print("Consuming...")
 
     fs_index = 0
@@ -171,8 +151,8 @@ def consume(id_this_node, detector, fs_list, run_event, logger, ip_address_cloud
             #run_event.wait(1) # DEBUG
             continue
 
-        img = resize_image(frame_object.raw_frame, 1280, 856, yolo_run)
-        result = run_detector(detector, img, yolo_run)
+        img = resize_image(frame_object.raw_frame, 1280, 856)
+        result = run_detector(detector, img)
 
         # Keep track of completion timestamp
         frame_object.completion_timestamp = current_time_int()
@@ -279,7 +259,7 @@ def main():
 
     # Check arguments; we are just gonna trust the name of the log file
     n_arguments = len(sys.argv)
-    if n_arguments != 8 or not check_int(sys.argv[1]) or not check_int(sys.argv[2]) or not check_int(sys.argv[3]) or not check_int(sys.argv[6]):
+    if n_arguments != 7 or not check_int(sys.argv[1]) or not check_int(sys.argv[2]) or not check_int(sys.argv[3]) or not check_int(sys.argv[6]):
         exit("The arguments are not correct\nPlease provide:\n\t1) the id of this node\n\t2) the number of cameras expected to connect\n\t3) the period of measures of utilization [s]\n\t4) the name of the log file\n\t5) the IP address of the cloud to send the results\n\t6) buffer length\n\t7) module to be used")
 
     id_this_node = int(sys.argv[1])
@@ -288,30 +268,11 @@ def main():
     log_file = sys.argv[4]
     ip_address_cloud = sys.argv[5]
     buffer_length = int(sys.argv[6])
-    module = sys.argv[7]
 
     print("Arguments are OK")
-
-    # Check available GPU devices.
-    print("The following GPU devices are available: %s" % tf.test.gpu_device_name())
-
-    yolo_run = False # keep false for inception and mobile, true for yolo
-
-    # Get the detector
-    if module == 'mobile':
-        module_handle = "https://tfhub.dev/google/openimages_v4/ssd/mobilenet_v2/1"
-        detector = hub.load(module_handle).signatures['default']
-    else:
-        if module == 'inception':
-            module_handle = "https://tfhub.dev/google/faster_rcnn/openimages_v4/inception_resnet_v2/1"
-            detector = hub.load(module_handle).signatures['default']
-        else:
-            if module == 'yolo':
-                detector = torch.hub.load('ultralytics/yolov5', 'yolov5s', pretrained=True)
-                yolo_run = True
-            else:
-                exit("The module provided is not correct")
     
+    # Get the detector
+    detector = torch.hub.load('ultralytics/yolov5', 'yolov5s', pretrained=True)
 
     # Prepare the frameslot list
     fs_list = [FrameSlot(id, buffer_length) for id in range(1,n_cameras + 1)]
@@ -323,10 +284,10 @@ def main():
 
     # Preparing threads
     logger_thread = threading.Thread(target = track_utilization, args = (run_event, logger, n_seconds))
-    consumer_thread = threading.Thread(target = consume, args = (id_this_node, detector, fs_list, run_event, logger, ip_address_cloud, yolo_run))
+    consumer_thread = threading.Thread(target = consume, args = (id_this_node, detector, fs_list, run_event, logger, ip_address_cloud))
 
     # Load the detector on the GPU via a call on an empty tensor
-    load_model_on_GPU(detector, yolo_run)
+    load_model_on_GPU(detector)
 
     logger_thread.start()
     consumer_thread.start()
