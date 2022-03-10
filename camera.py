@@ -127,7 +127,7 @@ def main():
 
     # Check number of arguments
     n_arguments = len(sys.argv)
-    if n_arguments != 3 or n_arguments != 4:
+    if n_arguments != 3 and n_arguments != 4:
         exit("The number of argument is not correct\nPlease provide: ID frame slot, IP consumer node and log file name (optional)")
 
     # Check type of arguments
