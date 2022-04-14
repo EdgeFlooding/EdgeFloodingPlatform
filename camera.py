@@ -74,6 +74,7 @@ def produce(stub, id_frame_slot, ip_consumer, channel, port, logger):
             while True:
                 try:
                     frame_sent_timestamp = current_time_int()
+                    prev_update_timestamp = time.time()
                     stub.HandleNewFrame(frame_req)
                 except:
                     print(".", end='', flush=True)
@@ -89,8 +90,6 @@ def produce(stub, id_frame_slot, ip_consumer, channel, port, logger):
             
             if logger is not None:
                 logger.info(f'[ACK_LAG] {{"Frame_sent_timestamp": {frame_sent_timestamp}, "Frame_received_timestamp": {ack_received_timestamp}}}')
-
-            prev_update_timestamp = time.time()
 
             print("Sent frame:", str(id_frame), "from producer", str(id_frame_slot)) # DEBUG
             id_frame = id_frame + 1
